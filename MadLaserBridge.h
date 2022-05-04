@@ -54,24 +54,6 @@ public:
 
 private:
 
-	// example functions for generating a geometry, change them with any
-	// fucntions and algorithm:
-
-	//void cubeGeometry(SOP_Output* output, float scale = 1.0f);
-
-	//void lineGeometry(SOP_Output* output);
-
-	//void triangleGeometry(SOP_Output* output);
-
-	//void cubeGeometryVBO(SOP_VBOOutput* output, float scale = 1.0f);
-
-	//void lineGeometryVBO(SOP_VBOOutput* output);
-
-	//void triangleGeometryVBO(SOP_VBOOutput* output);
-
-	//void particleGeometryVBO(SOP_VBOOutput* output);
-
-
 	// We don't need to store this pointer, but we do for the example.
 	// The OP_NodeInfo class store information about the node that's using
 	// this instance of the class (like its name).
