@@ -119,92 +119,198 @@ MadLaserBridge::getGeneralInfo(SOP_GeneralInfo* ginfo, const OP_Inputs* inputs, 
 
 }
 
+void MadLaserBridge::push16bits(std::vector<unsigned char>& fullData, unsigned short value) {
+	fullData.push_back(static_cast<unsigned char>((value >> 0) & 0xFF));
+	fullData.push_back(static_cast<unsigned char>((value >> 8) & 0xFF));
+}
+
+void MadLaserBridge::push32bits(std::vector<unsigned char>& fullData, int value) {
+	fullData.push_back(static_cast<unsigned char>((value >> 0) & 0xFF));
+	fullData.push_back(static_cast<unsigned char>((value >> 8) & 0xFF));
+	fullData.push_back(static_cast<unsigned char>((value >> 16) & 0xFF));
+	fullData.push_back(static_cast<unsigned char>((value >> 24) & 0xFF));
+}
+
+void MadLaserBridge::pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], int value) {
+	for (int i = 0; i < 8; i++) {
+		fullData.push_back(eightCC[i]);
+	}
+	push32bits(fullData, value);
+}
+void MadLaserBridge::pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], float value) {
+	for (int i = 0; i < 8; i++) {
+		fullData.push_back(eightCC[i]);
+	}
+	push32bits(fullData, *(int*)&value);
+}
+
+void MadLaserBridge::pushPoint(std::vector<unsigned char>& fullData, Position* pointPosition, Color* pointColor) {
+	const auto x16Bits = static_cast<unsigned short>(((x + 1) / 2) * 65535);
+	const auto y16Bits = static_cast<unsigned short>(((y + 1) / 2) * 65535);
+
+	const auto r16Bits = static_cast<unsigned short>(((r + 1) / 2) * 65535);
+	const auto g16Bits = static_cast<unsigned short>(((g + 1) / 2) * 65535);
+	const auto b16Bits = static_cast<unsigned short>(((b + 1) / 2) * 65535);
+
+	// Push X - LSB first
+	push16bits(fullData, x16Bits);
+	// Push Y - LSB first
+	push16bits(fullData, y16Bits);
+	// Push R - LSB first
+	push16bits(fullData, r16Bits);
+	// Push G - LSB first
+	push16bits(fullData, g16Bits);
+	// Push B - LSB first
+	push16bits(fullData, b16Bits);
+
+}
+
+bool MadLaserBridge::validatePrimitiveDat(const OP_DATInput* primitive, int numPrimitives) {
+	// Check that the dat is table
+	if (!primitive->isTable) {
+		return false;
+	}
+
+	// Check that that the number of row match the number of primitive + title
+	if (primitive->numRows != (numPrimitives + 1)) {
+		return false;
+	}
+
+	// Check that the title of the third column is close
+	if (primitive->getCell(0, 2) != "close") {
+		return false;
+	}
+
+	return true;
+}
+
 void
 MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reserved)
 {
 	myExecuteCount++;
 
-	if (inputs->getNumInputs() > 0)
-	{
-		inputs->enablePar("Reset", 0);	// not used
-		inputs->enablePar("Shape", 0);	// not used
-		inputs->enablePar("Scale", 0);  // not used
+	// Get the primitive dat from the attribute
+	const OP_DATInput* primitive = inputs->getParDAT("Primitive"); 
 
+	// Only run if a SOP is connected on the first input and a
+	// is set on the primitive parameter
+	if (inputs->getNumInputs() > 0 && primitive)
+	{
+		// Get the input sop
 		const OP_SOPInput	*sinput = inputs->getInputSOP(0);
 
-		const Position* ptArr = sinput->getPointPositions();
-		//const Vector* normals = nullptr;
-		const Color* colors = nullptr;
-		//const TexCoord* textures = nullptr;
-		int32_t numTextures = 0;
-
-
-		if (sinput->hasColors())
-		{
-			colors = sinput->getColors()->colors;
-		}
-
+		// Create the vector the will store our
 		std::vector<unsigned char> fullData;
 		fullData.reserve(65536);
 
 		// Write Format Data
 		fullData.push_back(GEOM_UDP_DATA_FORMAT_XYRGB_U16);
 
-
-		for (int i = 0; i < sinput->getNumPrimitives(); i++)
+		// Check that the primitive dat is valid
+		if(validatePrimitiveDat(primitive, sinput->getNumPrimitives()))
 		{
-
-			std::cout << "-------------------- primitive : " << i << std::endl;
-
-			const SOP_PrimitiveInfo primInfo = sinput->getPrimitive(i);
-
-			const int32_t* primVert = primInfo.pointIndices;
-			std::cout << primInfo.numVertices << std::endl;
-
-			// Write point count - LSB first
-			fullData.push_back((primInfo.numVertices >> 0) & 0xFF);
-			fullData.push_back((primInfo.numVertices >> 8) & 0xFF);
-
-			for (int j = 0; j < primInfo.numVertices; j++) {
-
-				std::cout << j << std::endl;
-				Position pointPosition = ptArr[primVert[j]];
-				std::cout << "x : " << pointPosition.x << " y : " << pointPosition.y << " z : " << pointPosition.z << std::endl;
-
-				if (sinput->hasColors()) {
-					Color pointColor = colors[primVert[j]];
-					std::cout << "r : " << pointColor.r << " g : " << pointColor.g << " b : " << pointColor.b << " a : " << pointColor.a << std::endl;
-				} 
+			const Position* ptArr = sinput->getPointPositions();
+			const Color* colors = nullptr;
 
 
-				const auto x16Bits = static_cast<unsigned short>(((pointPosition.x + 1) / 2) * 65535);
-				const auto y16Bits = static_cast<unsigned short>(((pointPosition.y + 1) / 2) * 65535);
-				// Push X - LSB first
-				fullData.push_back(static_cast<unsigned char>((x16Bits >> 0) & 0xFF));
-				fullData.push_back(static_cast<unsigned char>((x16Bits >> 8) & 0xFF));
-				// Push Y - LSB first
-				fullData.push_back(static_cast<unsigned char>((y16Bits >> 0) & 0xFF));
-				fullData.push_back(static_cast<unsigned char>((y16Bits >> 8) & 0xFF));
-				// Push R - LSB first
-				fullData.push_back(0xFF);
-				fullData.push_back(0xFF);
-				// Push G - LSB first
-				fullData.push_back(0xFF);
-				fullData.push_back(0xFF);
-				// Push B - LSB first
-				fullData.push_back(0xFF);
-				fullData.push_back(0xFF);
+			if (sinput->hasColors())
+			{
+				colors = sinput->getColors()->colors;
+			}
+
+
+			for (int i = 0; i < sinput->getNumPrimitives(); i++)
+			{
+
+				std::cout << "-------------------- primitive : " << i << std::endl;
+
+				const SOP_PrimitiveInfo primInfo = sinput->getPrimitive(i);
+
+				const int32_t* primVert = primInfo.pointIndices;
+				std::cout << primInfo.numVertices << std::endl;
+
+				// Write point count - LSB first
+				fullData.push_back((primInfo.numVertices >> 0) & 0xFF);
+				fullData.push_back((primInfo.numVertices >> 8) & 0xFF);
+
+				for (int j = 0; j < primInfo.numVertices; j++) {
+
+					std::cout << j << std::endl;
+					Position pointPosition = ptArr[primVert[j]];
+					std::cout << "x : " << pointPosition.x << " y : " << pointPosition.y << " z : " << pointPosition.z << std::endl;
+
+					float r = 1.0f;
+					float g = 1.0f;
+					float b = 1.0f;
+
+					if (sinput->hasColors()) {
+						Color pointColor = colors[primVert[j]];
+						r = pointColor.r;
+						g = pointColor.g;
+						b = pointColor.b;
+
+						std::cout << "r : " << pointColor.r << " g : " << pointColor.g << " b : " << pointColor.b << " a : " << pointColor.a << std::endl;
+					}
+
+					pushPoint(fullData, pointPosition.x, pointPosition.y, r, g, b);
+
+					//const auto x16Bits = static_cast<unsigned short>(((pointPosition.x + 1) / 2) * 65535);
+					//const auto y16Bits = static_cast<unsigned short>(((pointPosition.y + 1) / 2) * 65535);
+
+					//// Push X - LSB first
+					//push16bits(fullData, x16Bits);
+					//// Push Y - LSB first
+					//push16bits(fullData, y16Bits);
+
+
+					//// Push X - LSB first
+					//fullData.push_back(static_cast<unsigned char>((x16Bits >> 0) & 0xFF));
+					//fullData.push_back(static_cast<unsigned char>((x16Bits >> 8) & 0xFF));
+					//// Push Y - LSB first
+					//fullData.push_back(static_cast<unsigned char>((y16Bits >> 0) & 0xFF));
+					//fullData.push_back(static_cast<unsigned char>((y16Bits >> 8) & 0xFF));
+					//// Push R - LSB first
+					//fullData.push_back(0xFF);
+					//fullData.push_back(0xFF);
+					//// Push G - LSB first
+					//fullData.push_back(0xFF);
+					//fullData.push_back(0xFF);
+					//// Push B - LSB first
+					//fullData.push_back(0xFF);
+					//fullData.push_back(0xFF);
+				}
+
+				// If the primitive is close add the first point at the end
+				if (primitive->getCell(i, 2) == "1")
+				{
+
+				}
 			}
 
 		}
 
-
+		// Check if we don't reach the maximum number of chunck
 		size_t chunksCount64 = 1 + fullData.size() / GEOM_UDP_MAX_DATA_BYTES_PER_PACKET;
 		if (chunksCount64 > 255) {
 			throw std::runtime_error("Protocol doesn't accept sending "
 				"a packet that would be splitted "
 				"in more than 255 chunks");
 		}
+
+		// Get the ip address from the attribute
+		int ip[4];
+		inputs->getParInt4("Netaddress", ip[0], ip[1], ip[2], ip[3]);
+
+		std::cout << "Ip " 
+			<< std::to_string(ip[0]) << "." 
+			<< std::to_string(ip[1]) << "."
+			<< std::to_string(ip[2]) << "."
+			<< std::to_string(ip[3]) << std::endl;
+
+		// Get the Unique identifier from the attribute
+		int uid = inputs->getParInt("Uid");
+
+		std::cout << "Uid " << uid << std::endl;
 
 		size_t written = 0;
 		unsigned char chunkNumber = 0;
@@ -214,6 +320,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			GeomUdpHeader header;
 			strncpy(header.headerString, GEOM_UDP_HEADER_STRING, sizeof(header.headerString));
 			header.protocolVersion = 0;
+			header.senderIdentifier = uid; // Unique ID (so when changing name in sender, the receiver can just rename existing stream)
 			strncpy(header.senderName, "Sample Sender", sizeof(header.senderName));
 			header.frameNumber = frameNumber;
 			header.chunkCount = chunksCount;
@@ -235,7 +342,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			// Multicast 
 			//destAddr.ip = GEOM_UDP_IP;
 			// Unicast on localhost
-			destAddr.ip = ((192 << 24) + (168 << 16) + (1 << 8) + 4);
+			destAddr.ip = ((ip[0] << 24) + (ip[1] << 16) + (ip[2] << 8) + ip[3]);
 			destAddr.port = GEOM_UDP_PORT;
 			socket->sendTo(destAddr, &packet.front(), static_cast<unsigned int>(packet.size()));
 
@@ -385,66 +492,110 @@ MadLaserBridge::getInfoDATEntries(int32_t index,
 void
 MadLaserBridge::setupParameters(OP_ParameterManager* manager, void* reserved)
 {
-	// CHOP
-	{
-		OP_StringParameter	np;
+	//// CHOP
+	//{
+	//	OP_StringParameter	np;
 
-		np.name = "Chop";
-		np.label = "CHOP";
+	//	np.name = "Chop";
+	//	np.label = "CHOP";
 
-		OP_ParAppendResult res = manager->appendCHOP(np);
-		assert(res == OP_ParAppendResult::Success);
-	}
+	//	OP_ParAppendResult res = manager->appendCHOP(np);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
 
-	// scale
+	//// scale
+	//{
+	//	OP_NumericParameter	np;
+
+	//	np.name = "Scale";
+	//	np.label = "Scale";
+	//	np.defaultValues[0] = 1.0;
+	//	np.minSliders[0] = -10.0;
+	//	np.maxSliders[0] = 10.0;
+
+	//	OP_ParAppendResult res = manager->appendFloat(np);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
+
+	//// shape
+	//{
+	//	OP_StringParameter	sp;
+
+	//	sp.name = "Shape";
+	//	sp.label = "Shape";
+
+	//	sp.defaultValue = "Cube";
+
+	//	const char *names[] = { "Cube", "Triangle", "Line" };
+	//	const char *labels[] = { "Cube", "Triangle", "Line" };
+
+	//	OP_ParAppendResult res = manager->appendMenu(sp, 3, names, labels);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
+
+	//// GPU Direct
+	//{
+	//	OP_NumericParameter np;
+
+	//	np.name = "Gpudirect";
+	//	np.label = "GPU Direct";
+
+	//	OP_ParAppendResult res = manager->appendToggle(np);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
+
+	//// pulse
+	//{
+	//	OP_NumericParameter	np;
+
+	//	np.name = "Reset";
+	//	np.label = "Reset";
+
+	//	OP_ParAppendResult res = manager->appendPulse(np);
+	//	assert(res == OP_ParAppendResult::Success);
+	//}
+	// 
+	// Ip
 	{
 		OP_NumericParameter	np;
 
-		np.name = "Scale";
-		np.label = "Scale";
-		np.defaultValues[0] = 1.0;
-		np.minSliders[0] = -10.0;
-		np.maxSliders[0] = 10.0;
+		np.name = "Netaddress";
+		np.label = "Network Address";
 
-		OP_ParAppendResult res = manager->appendFloat(np);
-		assert(res == OP_ParAppendResult::Success);
+		// Minimum values
+		np.minValues[0] = 0;
+		np.minValues[1] = 0;
+		np.minValues[2] = 0;
+		np.minValues[3] = 0;
+
+		// Maximum values
+		np.maxValues[0] = 255;
+		np.maxValues[1] = 255;
+		np.maxValues[2] = 255;
+		np.maxValues[3] = 255;
+
+		OP_ParAppendResult res = manager->appendInt(np, 4);
+
 	}
 
-	// shape
-	{
-		OP_StringParameter	sp;
-
-		sp.name = "Shape";
-		sp.label = "Shape";
-
-		sp.defaultValue = "Cube";
-
-		const char *names[] = { "Cube", "Triangle", "Line" };
-		const char *labels[] = { "Cube", "Triangle", "Line" };
-
-		OP_ParAppendResult res = manager->appendMenu(sp, 3, names, labels);
-		assert(res == OP_ParAppendResult::Success);
-	}
-
-	// GPU Direct
-	{
-		OP_NumericParameter np;
-
-		np.name = "Gpudirect";
-		np.label = "GPU Direct";
-
-		OP_ParAppendResult res = manager->appendToggle(np);
-		assert(res == OP_ParAppendResult::Success);
-	}
-
-	// pulse
+	// Unique ID
 	{
 		OP_NumericParameter	np;
 
-		np.name = "Reset";
-		np.label = "Reset";
+		np.name = "Uid";
+		np.label = "Unique ID";
 
-		OP_ParAppendResult res = manager->appendPulse(np);
+		OP_ParAppendResult res = manager->appendInt(np, 1);
+	}
+
+	// Primitive data
+	{
+		OP_StringParameter sopp;
+
+		sopp.name = "Primitive";
+		sopp.label = "Primitive";
+
+		OP_ParAppendResult res = manager->appendDAT(sopp);
 		assert(res == OP_ParAppendResult::Success);
 	}
 

@@ -61,13 +61,51 @@
 // Geom UDP port = 5583
 #define GEOM_UDP_PORT 5583
 
+#ifdef _MSC_VER
+    // ms VC .NET
+    #pragma pack( push, before_definition )
+    #pragma pack(1)
+    #define ATTRIBUTE_PACKED ;
+#else
+    // gcc
+    #ifdef ATTRIBUTE_PACKED
+        #undef ATTRIBUTE_PACKED
+    #endif
+    #define ATTRIBUTE_PACKED __attribute__( ( packed ) )
+#endif
+
 struct GeomUdpHeader {
     char headerString[8];           // = "Geom-UDP"
     unsigned char protocolVersion;  // 0 at the moment
-    //unsigned int senderIdentifier;  // 4 bytes - used to identify the sourc
+    unsigned int senderIdentifier;  // 4 bytes - used to identify the source, so when changing name in sender, the receiver can just rename existing stream
     char senderName[32];            // 32 bytes UTF8 null terminated string
-    unsigned char frameNumber;
+    unsigned char frameNumber;      // Increase by one on each frame
     unsigned char chunkCount;
     unsigned char chunkNumber;
-    // Data
-};
+} ATTRIBUTE_PACKED;
+
+struct GeomUdpMetaData {
+    char name[8];                   // EightCC (64 bits / 8 bytes), ie "POLYNUMB"
+    char value[4];                  // 4 bytes for value, must be casted to int / bool / float
+} ATTRIBUTE_PACKED;
+
+struct GeomUdpPathData {
+    unsigned short pointCount;     // Point Count
+    // Data: XYRGBXYRGB....
+} ATTRIBUTE_PACKED;
+
+struct GeomUdpPath {
+    unsigned char metaDataCount;    // Number of meta data
+    // Data: N x GeomUdpMetaData, then N x GeomUdpPathData
+} ATTRIBUTE_PACKED;
+
+struct GeomUdpPacketData {
+    unsigned char dataFormat;         // ie: GEOM_UDP_DATA_FORMAT_XYRGB_U16
+    // Data: N x GeomUdpPath
+} ATTRIBUTE_PACKED;
+
+#if defined(_MSC_VER)
+    #pragma pack( pop, before_definition )
+#endif
+
+#undef ATTRIBUTE_PACKED

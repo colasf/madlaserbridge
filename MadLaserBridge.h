@@ -19,6 +19,8 @@
 #include "SOP_CPlusPlusBase.h"
 #include <string>
 
+#include <vector>
+
 
 // To get more help about these functions, look at SOP_CPlusPlusBase.h
 class 
@@ -53,6 +55,12 @@ public:
 	virtual void pulsePressed(const char* name, void* reserved) override;
 
 private:
+	void push16bits(std::vector<unsigned char>& fullData, unsigned short value);
+	void push32bits(std::vector<unsigned char>& fullData, int value);
+	void pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], int value);
+	void pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], float value);
+	void pushPoint(std::vector<unsigned char>& fullData, Position* pointPosition, Color* pointColor);
+	bool validatePrimitiveDat(const OP_DATInput* primitive, int numPrimitive);
 
 	// We don't need to store this pointer, but we do for the example.
 	// The OP_NodeInfo class store information about the node that's using
