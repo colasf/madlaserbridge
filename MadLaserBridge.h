@@ -22,6 +22,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include "matrix.h"
 
 
 
@@ -65,6 +66,8 @@ private:
 	void pushPoint(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor);
 	bool validatePrimitiveDat(const OP_DATInput* primitive, int numPrimitive);
 	std::map<std::string, float> getMetadata(const OP_DATInput* primitive, int primitiveIndex);
+
+	Matrix44<double> buildCameraTransProjMatrix(const OP_Inputs* inputs);
 
 	// We don't need to store this pointer, but we do for the example.
 	// The OP_NodeInfo class store information about the node that's using

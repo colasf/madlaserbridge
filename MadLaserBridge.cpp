@@ -201,6 +201,57 @@ std::map<std::string, float> MadLaserBridge::getMetadata(const OP_DATInput* prim
 	return metadata;
 }
 
+Matrix44<double>
+MadLaserBridge::buildCameraTransProjMatrix(const OP_Inputs* inputs)
+{
+
+	// get the camera object
+	const OP_ObjectInput* camera = inputs->getParObject("Camera");
+
+	Matrix44<double> cameraWorldTransform;
+	// check if the parameter is set
+	if (camera)
+	{
+		// it seems that the array returned by OP_ObjectInput->worldTransform
+		// is not in the correct order therefore we need to reverse
+		// it before creating our matrix
+		// TODO: check if that really needed because i had to 
+		// change the order of the Position Matrix multiplication
+		// in multPositionMatrix member function of the matrix
+		// class to compensate that 90 degress matrix rotation
+		cameraWorldTransform = Matrix44<double>();
+		for (int x = 0; x < 4; x++)
+		{
+			for (int y = 0; y < 4; y++)
+			{
+				cameraWorldTransform[x][y] = camera->worldTransform[y][x];
+			}
+		}
+		cameraWorldTransform.invert();
+	}
+
+	// get the camera projection matrix
+	Matrix44<double> cameraProjection;
+	inputs->getParDouble4("Projectionmatrixa", cameraProjection[0][0],
+		cameraProjection[0][1],
+		cameraProjection[0][2],
+		cameraProjection[0][3]);
+	inputs->getParDouble4("Projectionmatrixb", cameraProjection[1][0],
+		cameraProjection[1][1],
+		cameraProjection[2][2],
+		cameraProjection[3][3]);
+	inputs->getParDouble4("Projectionmatrixc", cameraProjection[2][0],
+		cameraProjection[2][1],
+		cameraProjection[2][2],
+		cameraProjection[2][3]);
+	inputs->getParDouble4("Projectionmatrixd", cameraProjection[3][0],
+		cameraProjection[3][1],
+		cameraProjection[3][2],
+		cameraProjection[3][3]);
+
+	return cameraProjection * cameraWorldTransform;
+}
+
 
 
 void
@@ -217,6 +268,9 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 	{
 		// Get the input sop
 		const OP_SOPInput	*sinput = inputs->getInputSOP(0);
+
+		// build the matrix to do the world space to screen projection
+		Matrix44<double> cameraTransProj = buildCameraTransProjMatrix(inputs);
 
 		// Create the vector  will store our the data that need to be send to madLaser
 		std::vector<unsigned char> fullData;
@@ -283,7 +337,8 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 				for (int j = 0; j < primInfo.numVertices; j++) {
 
 					//std::cout << j << std::endl;
-					Position pointPosition = ptArr[primVert[j]];
+					Position pointPosition = cameraTransProj * ptArr[primVert[j]];
+
 					//std::cout << "x : " << pointPosition.x << " y : " << pointPosition.y << " z : " << pointPosition.z << std::endl;
 
 					
@@ -637,6 +692,68 @@ MadLaserBridge::setupParameters(OP_ParameterManager* manager, void* reserved)
 		assert(res == OP_ParAppendResult::Success);
 	}
 
+
+	// Camera
+
+	// Camera Object
+	{
+		OP_StringParameter sp;
+
+		sp.name = "Camera";
+		sp.label = "Camera";
+
+		OP_ParAppendResult res = manager->appendObject(sp);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	// projection matrix
+	{
+		OP_NumericParameter	np;
+
+		np.name = "Projectionmatrixa";
+		np.label = "Projection Matrix A";
+
+		np.defaultValues[0] = 1;
+
+		OP_ParAppendResult res = manager->appendFloat(np, 4);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	{
+		OP_NumericParameter	np;
+
+		np.defaultValues[1] = 1;
+
+		np.name = "Projectionmatrixb";
+		np.label = "Projection Matrix B";
+
+		OP_ParAppendResult res = manager->appendFloat(np, 4);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	{
+		OP_NumericParameter	np;
+
+		np.defaultValues[2] = 1;
+
+		np.name = "Projectionmatrixc";
+		np.label = "Projection Matrix C";
+
+		OP_ParAppendResult res = manager->appendFloat(np, 4);
+		assert(res == OP_ParAppendResult::Success);
+	}
+
+	{
+		OP_NumericParameter	np;
+
+		np.defaultValues[3] = 1;
+
+		np.name = "Projectionmatrixd";
+		np.label = "Projection Matrix D";
+
+		OP_ParAppendResult res = manager->appendFloat(np, 4);
+		assert(res == OP_ParAppendResult::Success);
+	}
 }
 
 void
