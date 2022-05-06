@@ -606,6 +606,12 @@ MadLaserBridge::setupParameters(OP_ParameterManager* manager, void* reserved)
 		np.maxValues[2] = 255;
 		np.maxValues[3] = 255;
 
+		// Default value
+		np.defaultValues[0] = 127;
+		np.defaultValues[1] = 0;
+		np.defaultValues[2] = 0;
+		np.defaultValues[3] = 1;
+
 		OP_ParAppendResult res = manager->appendInt(np, 4);
 
 	}
