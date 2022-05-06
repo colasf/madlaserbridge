@@ -20,7 +20,7 @@
 #include <math.h>
 #include <assert.h>
 #include <iostream>
-#include <vector>
+
 
 
 
@@ -56,7 +56,7 @@ extern "C"
 
 		// Information about the author of this OP
 		info->customOPInfo.authorName->setString("Tyrell");
-		info->customOPInfo.authorEmail->setString("colas.fiszman@gmail.com");
+		info->customOPInfo.authorEmail->setString("colas@tyrell.studio");
 
 		// This SOP works with 0 or 1 inputs
 		info->customOPInfo.minInputs = 0;
@@ -114,8 +114,7 @@ MadLaserBridge::getGeneralInfo(SOP_GeneralInfo* ginfo, const OP_Inputs* inputs, 
 	ginfo->cookEveryFrame = true;
 
 	//if direct to GPU loading:
-	bool directGPU = inputs->getParInt("Gpudirect") != 0 ? true : false;
-	ginfo->directToGPU = directGPU;
+	ginfo->directToGPU = false;
 
 }
 
@@ -144,13 +143,13 @@ void MadLaserBridge::pushMetaData(std::vector<unsigned char>& fullData, const ch
 	push32bits(fullData, *(int*)&value);
 }
 
-void MadLaserBridge::pushPoint(std::vector<unsigned char>& fullData, Position* pointPosition, Color* pointColor) {
-	const auto x16Bits = static_cast<unsigned short>(((x + 1) / 2) * 65535);
-	const auto y16Bits = static_cast<unsigned short>(((y + 1) / 2) * 65535);
+void MadLaserBridge::pushPoint(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor) {
+	const auto x16Bits = static_cast<unsigned short>(((pointPosition.x + 1) / 2) * 65535);
+	const auto y16Bits = static_cast<unsigned short>(((pointPosition.y + 1) / 2) * 65535);
 
-	const auto r16Bits = static_cast<unsigned short>(((r + 1) / 2) * 65535);
-	const auto g16Bits = static_cast<unsigned short>(((g + 1) / 2) * 65535);
-	const auto b16Bits = static_cast<unsigned short>(((b + 1) / 2) * 65535);
+	const auto r16Bits = static_cast<unsigned short>(((pointColor.r + 1) / 2) * 65535);
+	const auto g16Bits = static_cast<unsigned short>(((pointColor.g + 1) / 2) * 65535);
+	const auto b16Bits = static_cast<unsigned short>(((pointColor.b + 1) / 2) * 65535);
 
 	// Push X - LSB first
 	push16bits(fullData, x16Bits);
@@ -177,12 +176,32 @@ bool MadLaserBridge::validatePrimitiveDat(const OP_DATInput* primitive, int numP
 	}
 
 	// Check that the title of the third column is close
-	if (primitive->getCell(0, 2) != "close") {
+	if (strcmp(primitive->getCell(0, 2), "close") != 0)
+	{
 		return false;
 	}
 
 	return true;
 }
+
+
+std::map<std::string, float> MadLaserBridge::getMetadata(const OP_DATInput* primitive, int primitiveIndex) {
+	std::map<std::string, float> metadata;
+	
+	// check how many metadata attribute the primitive dat contains
+	int numMetadata = primitive->numCols - 4;
+
+	// get the metadata from the dat
+	for (int i = 0; i < numMetadata; i++) {
+		std::string metadataName = primitive->getCell(0, 3 + i);
+		float metadataValue = (float)std::strtod(primitive->getCell(primitiveIndex + 1, 3 + i), NULL);
+		metadata[metadataName] = metadataValue;
+	}
+
+	return metadata;
+}
+
+
 
 void
 MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reserved)
@@ -199,7 +218,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 		// Get the input sop
 		const OP_SOPInput	*sinput = inputs->getInputSOP(0);
 
-		// Create the vector the will store our
+		// Create the vector  will store our the data that need to be send to madLaser
 		std::vector<unsigned char> fullData;
 		fullData.reserve(65536);
 
@@ -222,71 +241,84 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			for (int i = 0; i < sinput->getNumPrimitives(); i++)
 			{
 
-				std::cout << "-------------------- primitive : " << i << std::endl;
+				//std::cout << "-------------------- primitive : " << i << std::endl;
+
+				// get the metadata
+				std::map<std::string, float> metadata = getMetadata(primitive, i);
+
+				// Write meta data count
+				fullData.push_back(metadata.size());
+
+				for (const auto& kv : metadata) {
+					char charMetadata[9];
+					std::copy(kv.first.begin(), kv.first.end(), charMetadata);
+
+					pushMetaData(fullData, charMetadata, kv.second);
+				}
+
 
 				const SOP_PrimitiveInfo primInfo = sinput->getPrimitive(i);
 
 				const int32_t* primVert = primInfo.pointIndices;
-				std::cout << primInfo.numVertices << std::endl;
+				//std::cout << primInfo.numVertices << std::endl;
 
-				// Write point count - LSB first
-				fullData.push_back((primInfo.numVertices >> 0) & 0xFF);
-				fullData.push_back((primInfo.numVertices >> 8) & 0xFF);
+				int numPoints = primInfo.numVertices;
+
+				// check if the primitve is closed
+				bool isClosed = false;
+				if (strcmp(primitive->getCell(i+1, 2), "1") == 0) {
+					//std::cout << "primitive is close" << std::endl;
+
+					isClosed = true;
+
+					// add one point to the count
+					numPoints += 1;
+				}
+
+				//std::cout << numPoints << std::endl;
+
+				// Write point count
+				push16bits(fullData, numPoints);
 
 				for (int j = 0; j < primInfo.numVertices; j++) {
 
-					std::cout << j << std::endl;
+					//std::cout << j << std::endl;
 					Position pointPosition = ptArr[primVert[j]];
-					std::cout << "x : " << pointPosition.x << " y : " << pointPosition.y << " z : " << pointPosition.z << std::endl;
+					//std::cout << "x : " << pointPosition.x << " y : " << pointPosition.y << " z : " << pointPosition.z << std::endl;
 
-					float r = 1.0f;
-					float g = 1.0f;
-					float b = 1.0f;
+					
+					Color pointColor(1.0f, 1.0f, 1.0f, 1.0f);
 
 					if (sinput->hasColors()) {
-						Color pointColor = colors[primVert[j]];
-						r = pointColor.r;
-						g = pointColor.g;
-						b = pointColor.b;
+						pointColor = colors[primVert[j]];
 
-						std::cout << "r : " << pointColor.r << " g : " << pointColor.g << " b : " << pointColor.b << " a : " << pointColor.a << std::endl;
+						//std::cout << "r : " << pointColor.r << " g : " << pointColor.g << " b : " << pointColor.b << " a : " << pointColor.a << std::endl;
 					}
 
-					pushPoint(fullData, pointPosition.x, pointPosition.y, r, g, b);
+					pushPoint(fullData, pointPosition, pointColor);
 
-					//const auto x16Bits = static_cast<unsigned short>(((pointPosition.x + 1) / 2) * 65535);
-					//const auto y16Bits = static_cast<unsigned short>(((pointPosition.y + 1) / 2) * 65535);
-
-					//// Push X - LSB first
-					//push16bits(fullData, x16Bits);
-					//// Push Y - LSB first
-					//push16bits(fullData, y16Bits);
-
-
-					//// Push X - LSB first
-					//fullData.push_back(static_cast<unsigned char>((x16Bits >> 0) & 0xFF));
-					//fullData.push_back(static_cast<unsigned char>((x16Bits >> 8) & 0xFF));
-					//// Push Y - LSB first
-					//fullData.push_back(static_cast<unsigned char>((y16Bits >> 0) & 0xFF));
-					//fullData.push_back(static_cast<unsigned char>((y16Bits >> 8) & 0xFF));
-					//// Push R - LSB first
-					//fullData.push_back(0xFF);
-					//fullData.push_back(0xFF);
-					//// Push G - LSB first
-					//fullData.push_back(0xFF);
-					//fullData.push_back(0xFF);
-					//// Push B - LSB first
-					//fullData.push_back(0xFF);
-					//fullData.push_back(0xFF);
 				}
 
 				// If the primitive is close add the first point at the end
-				if (primitive->getCell(i, 2) == "1")
+				if (isClosed)
 				{
+					Position pointPosition = ptArr[primVert[0]];
+
+					Color pointColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+					if (sinput->hasColors()) {
+						pointColor = colors[primVert[0]];
+					}
+
+					pushPoint(fullData, pointPosition, pointColor);
 
 				}
 			}
 
+		}
+		else
+		{
+			//std::cout << "Invalid Primitive Dat" << std::endl;
 		}
 
 		// Check if we don't reach the maximum number of chunck
@@ -301,16 +333,16 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 		int ip[4];
 		inputs->getParInt4("Netaddress", ip[0], ip[1], ip[2], ip[3]);
 
-		std::cout << "Ip " 
-			<< std::to_string(ip[0]) << "." 
-			<< std::to_string(ip[1]) << "."
-			<< std::to_string(ip[2]) << "."
-			<< std::to_string(ip[3]) << std::endl;
+		//std::cout << "Ip " 
+			//<< std::to_string(ip[0]) << "." 
+			//<< std::to_string(ip[1]) << "."
+			//<< std::to_string(ip[2]) << "."
+			//<< std::to_string(ip[3]) << std::endl;
 
 		// Get the Unique identifier from the attribute
 		int uid = inputs->getParInt("Uid");
 
-		std::cout << "Uid " << uid << std::endl;
+		//std::cout << "Uid " << uid << std::endl;
 
 		size_t written = 0;
 		unsigned char chunkNumber = 0;
@@ -349,7 +381,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			chunkNumber++;
 		}
 
-		std::cout << "Sent frame " << std::to_string(frameNumber) << std::endl;
+		//std::cout << "Sent frame " << std::to_string(frameNumber) << std::endl;
 
 		animTime += 1 / 60.;
 		frameNumber++;
