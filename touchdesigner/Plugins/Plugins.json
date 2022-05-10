@@ -1,0 +1,19 @@
+{
+    "Version": 1,
+    "AllowedPlugins": {
+        "b383156a": {
+            "ComputerName": "DESKTOP-HS3MMFG",
+            "Plugins": {
+                "E:/projects/madLaserBridge/touchdesigner/C++/madlaserbridge/touchdesigner/Plugins/MadLaserBridge.dll": {
+                    "Hashes": [
+                        "jrobjFhT35fTk4nQEbT8fTWzqHfrP9FjbfLriLFiY5P3j8FF3M5A1hqgaEU1t5g1SwR5VJtiEPR5FdWbvoGRj+PAWoJ+jY0GbGMrP5zcCTqPCV9MHKxAuAta7Lgb6NDg",
+                        "hXqznVI4DH4OlrgIRIGyO/iaGrfxlPrXQeHelBv9p8/yrqbelU80GfgCJOTOm+GxhRboOqexI+xImSXzBf3KP/icu2b0FaEC/5yClyqx9ax7A3rz2G/nexjBkB3C4dV+",
+                        "y3iTksvijHPtSRY446o6cLJ7AIrCyMe2bq30QoStPxesFN3QktEe6Yls8vLklDAV7Rpllq2JPVrevj89ipkL8gyZwxCCAvmGvxZN+XZCBWPzbXo/dILN5fv9Q0tv1WBl"
+                    ],
+                    "AuthorName": "Tyrell",
+                    "AuthorEmail": "colas@tyrell.studio"
+                }
+            }
+        }
+    }
+}

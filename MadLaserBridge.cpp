@@ -46,7 +46,7 @@ extern "C"
 		// The opType is the unique name for this TOP. It must start with a 
 		// capital A-Z character, and all the following characters must lower case
 		// or numbers (a-z, 0-9)
-		info->customOPInfo.opType->setString("MadLaserBridge");
+		info->customOPInfo.opType->setString("Madlaserbridge");
 
 		// The opLabel is the text that will show up in the OP Create Dialog
 		info->customOPInfo.opLabel->setString("Mad Laser Bridge");
@@ -59,8 +59,8 @@ extern "C"
 		info->customOPInfo.authorEmail->setString("colas@tyrell.studio");
 
 		// This SOP works with 0 or 1 inputs
-		info->customOPInfo.minInputs = 0;
-		info->customOPInfo.maxInputs = 0;
+		info->customOPInfo.minInputs = 1;
+		info->customOPInfo.maxInputs = 1;
 
 	}
 
