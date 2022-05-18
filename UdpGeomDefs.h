@@ -54,6 +54,7 @@
 #define GEOM_UDP_PROTOCOL_VERSION 0
 // Data Formats
 #define GEOM_UDP_DATA_FORMAT_XYRGB_U16 0
+#define GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8 1
 // Maximum chunk size
 #define GEOM_UDP_MAX_DATA_BYTES_PER_PACKET 1400
 // Geom UDP IP v4 address = 239.255.5.1

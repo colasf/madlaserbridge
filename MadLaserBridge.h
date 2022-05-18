@@ -36,9 +36,9 @@ public:
 
 	virtual ~MadLaserBridge();
 
-	virtual void	getGeneralInfo(SOP_GeneralInfo*, const OP_Inputs*, void* reserved1) override;
+	virtual void getGeneralInfo(SOP_GeneralInfo*, const OP_Inputs*, void* reserved1) override;
 
-	virtual void	execute(SOP_Output*, const OP_Inputs*, void* reserved) override;
+	virtual void execute(SOP_Output*, const OP_Inputs*, void* reserved) override;
 
 
 	virtual void executeVBO(SOP_VBOOutput* output, const OP_Inputs* inputs,
@@ -60,10 +60,12 @@ public:
 
 private:
 	void push16bits(std::vector<unsigned char>& fullData, unsigned short value);
-	void push32bits(std::vector<unsigned char>& fullData, int value);
+    void push32bits(std::vector<unsigned char>& fullData, int value);
+    void pushFloat32(std::vector<unsigned char>& fullData, float value);
 	void pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], int value);
 	void pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], float value);
-	void pushPoint(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor);
+    void pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor);
+    void pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor);
 	bool validatePrimitiveDat(const OP_DATInput* primitive, int numPrimitive);
 	std::map<std::string, float> getMetadata(const OP_DATInput* primitive, int primitiveIndex);
 

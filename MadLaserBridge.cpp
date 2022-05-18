@@ -130,6 +130,11 @@ void MadLaserBridge::push32bits(std::vector<unsigned char>& fullData, int value)
 	fullData.push_back(static_cast<unsigned char>((value >> 24) & 0xFF));
 }
 
+void MadLaserBridge::pushFloat32(std::vector<unsigned char>& fullData, float value) {
+    const auto asInt = *reinterpret_cast<int*>(&value);
+    push32bits(fullData,asInt);
+}
+
 void MadLaserBridge::pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], int value) {
 	for (int i = 0; i < 8; i++) {
 		fullData.push_back(eightCC[i]);
@@ -143,25 +148,62 @@ void MadLaserBridge::pushMetaData(std::vector<unsigned char>& fullData, const ch
 	push32bits(fullData, *(int*)&value);
 }
 
-void MadLaserBridge::pushPoint(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor) {
-	const auto x16Bits = static_cast<unsigned short>(((pointPosition.x + 1) / 2) * 65535);
-	const auto y16Bits = static_cast<unsigned short>(((pointPosition.y + 1) / 2) * 65535);
+void MadLaserBridge::pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor) {
+    pushFloat32(fullData, pointPosition.x);
+    pushFloat32(fullData, pointPosition.y);
+    fullData.push_back(static_cast<unsigned char>(pointColor.r*255));
+    fullData.push_back(static_cast<unsigned char>(pointColor.g*255));
+    fullData.push_back(static_cast<unsigned char>(pointColor.b*255));
+}
 
-	const auto r16Bits = static_cast<unsigned short>(((pointColor.r + 1) / 2) * 65535);
-	const auto g16Bits = static_cast<unsigned short>(((pointColor.g + 1) / 2) * 65535);
-	const auto b16Bits = static_cast<unsigned short>(((pointColor.b + 1) / 2) * 65535);
+void MadLaserBridge::pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor) {
+    if (pointPosition.x < -1 || pointPosition.x > 1 || pointPosition.y < -1 || pointPosition.y > 1) {
+        // Clamp position and set color = 0
+        unsigned short x16Bits, y16Bits;
+        if (pointPosition.x < -1) {
+            x16Bits = 0;
+        } else if (pointPosition.x > 1) {
+            x16Bits = 65535;
+        } else {
+            x16Bits = static_cast<unsigned short>(((pointPosition.x + 1) / 2) * 65535);
+        }
+        if (pointPosition.y < -1) {
+            y16Bits = 0;
+        } else if (pointPosition.y > 1) {
+            y16Bits = 65535;
+        } else {
+            y16Bits = static_cast<unsigned short>(((pointPosition.y + 1) / 2) * 65535);
+        }
 
-	// Push X - LSB first
-	push16bits(fullData, x16Bits);
-	// Push Y - LSB first
-	push16bits(fullData, y16Bits);
-	// Push R - LSB first
-	push16bits(fullData, r16Bits);
-	// Push G - LSB first
-	push16bits(fullData, g16Bits);
-	// Push B - LSB first
-	push16bits(fullData, b16Bits);
+        // Push X - LSB first
+        push16bits(fullData, x16Bits);
+        // Push Y - LSB first
+        push16bits(fullData, y16Bits);
+        // Push R - LSB first
+        push16bits(fullData, 0);
+        // Push G - LSB first
+        push16bits(fullData, 0);
+        // Push B - LSB first
+        push16bits(fullData, 0);
+    } else {
+        const auto x16Bits = static_cast<unsigned short>(((pointPosition.x + 1) / 2) * 65535);
+        const auto y16Bits = static_cast<unsigned short>(((pointPosition.y + 1) / 2) * 65535);
 
+        const auto r16Bits = static_cast<unsigned short>(((pointColor.r + 1) / 2) * 65535);
+        const auto g16Bits = static_cast<unsigned short>(((pointColor.g + 1) / 2) * 65535);
+        const auto b16Bits = static_cast<unsigned short>(((pointColor.b + 1) / 2) * 65535);
+
+        // Push X - LSB first
+        push16bits(fullData, x16Bits);
+        // Push Y - LSB first
+        push16bits(fullData, y16Bits);
+        // Push R - LSB first
+        push16bits(fullData, r16Bits);
+        // Push G - LSB first
+        push16bits(fullData, g16Bits);
+        // Push B - LSB first
+        push16bits(fullData, b16Bits);
+    }
 }
 
 bool MadLaserBridge::validatePrimitiveDat(const OP_DATInput* primitive, int numPrimitives) {
@@ -277,14 +319,13 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 		fullData.reserve(65536);
 
 		// Write Format Data
-		fullData.push_back(GEOM_UDP_DATA_FORMAT_XYRGB_U16);
+		fullData.push_back(GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8);
 
 		// Check that the primitive dat is valid
 		if(validatePrimitiveDat(primitive, sinput->getNumPrimitives()))
 		{
 			const Position* ptArr = sinput->getPointPositions();
 			const Color* colors = nullptr;
-
 
 			if (sinput->hasColors())
 			{
@@ -344,13 +385,13 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 					
 					Color pointColor(1.0f, 1.0f, 1.0f, 1.0f);
 
-					if (sinput->hasColors()) {
+                    if (sinput->hasColors()) {
 						pointColor = colors[primVert[j]];
 
 						//std::cout << "r : " << pointColor.r << " g : " << pointColor.g << " b : " << pointColor.b << " a : " << pointColor.a << std::endl;
 					}
 
-					pushPoint(fullData, pointPosition, pointColor);
+					pushPoint_XY_F32_RGB_U8(fullData, pointPosition, pointColor);
 
 				}
 
@@ -363,9 +404,9 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 
 					if (sinput->hasColors()) {
 						pointColor = colors[primVert[0]];
-					}
+                    }
 
-					pushPoint(fullData, pointPosition, pointColor);
+                    pushPoint_XY_F32_RGB_U8(fullData, pointPosition, pointColor);
 
 				}
 			}
@@ -408,7 +449,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			strncpy(header.headerString, GEOM_UDP_HEADER_STRING, sizeof(header.headerString));
 			header.protocolVersion = 0;
 			header.senderIdentifier = uid; // Unique ID (so when changing name in sender, the receiver can just rename existing stream)
-			strncpy(header.senderName, "Sample Sender", sizeof(header.senderName));
+			strncpy(header.senderName, "Touch Designer", sizeof(header.senderName));
 			header.frameNumber = frameNumber;
 			header.chunkCount = chunksCount;
 			header.chunkNumber = chunkNumber;
