@@ -14,6 +14,18 @@
                     "AuthorEmail": "colas@tyrell.studio"
                 }
             }
+        },
+        "9a2e97c7": {
+            "ComputerName": "matts-macbook-pro-2117.local",
+            "Plugins": {
+                "/Users/matt/Projects/MadMapper/Dev/projects/madlaserbridge/touchdesigner/Plugins/MadLaserBrigde.plugin": {
+                    "Hashes": [
+                        "M4CvLLJr4QugAOnG6RQPdX6+qnW6ghqvzypjgedSBghita3mFIkYylgZ9Kxb48603nObgq5Ab038fzXr3hy51VRv/aTrpwZ8TEhRCSD1HtJ4WdwGwVDvyrc951984hS6IL0N7uXcRZ47nCeJh4kPjcjBJFysRjdaJDaGTSJ9b2cmJ3PjnR0m/KO/xxruunCzLABvDX2jokZj4BBHscf6/AcJvLrzDUQaGhntnY95vnvyhkVKR2bAMNqWQHj5Gyw2DVvMW+68HKHT1nBAej+kJHnVSxGm6se6Q/Ycc6gVGppKTYK7WKVv/NiJlJyssgEevX0gKhuO0falPMaO5JwN3A=="
+                    ],
+                    "AuthorName": "Tyrell",
+                    "AuthorEmail": "colas@tyrell.studio"
+                }
+            }
         }
     }
 }
