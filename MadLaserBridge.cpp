@@ -266,7 +266,7 @@ MadLaserBridge::buildCameraTransProjMatrix(const OP_Inputs* inputs)
 		{
 			for (int y = 0; y < 4; y++)
 			{
-				cameraWorldTransform[x][y] = camera->worldTransform[y][x];
+				cameraWorldTransform[x][y] = camera->worldTransform[x][y];
 			}
 		}
 		cameraWorldTransform.invert();
@@ -300,6 +300,9 @@ void
 MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reserved)
 {
 	myExecuteCount++;
+	if (!inputs->getParInt("Active")) {
+		return;
+	}
 
 	// Get the primitive dat from the attribute
 	const OP_DATInput* primitive = inputs->getParDAT("Primitive"); 
@@ -398,7 +401,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 				// If the primitive is close add the first point at the end
 				if (isClosed)
 				{
-					Position pointPosition = ptArr[primVert[0]];
+					Position pointPosition = cameraTransProj * ptArr[primVert[0]];
 
 					Color pointColor(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -619,70 +622,16 @@ MadLaserBridge::getInfoDATEntries(int32_t index,
 
 void
 MadLaserBridge::setupParameters(OP_ParameterManager* manager, void* reserved)
-{
-	//// CHOP
-	//{
-	//	OP_StringParameter	np;
+{	// Active
 
-	//	np.name = "Chop";
-	//	np.label = "CHOP";
+	{
+		OP_NumericParameter	np;
 
-	//	OP_ParAppendResult res = manager->appendCHOP(np);
-	//	assert(res == OP_ParAppendResult::Success);
-	//}
+		np.name = "Active";
+		np.label = "Active";
 
-	//// scale
-	//{
-	//	OP_NumericParameter	np;
-
-	//	np.name = "Scale";
-	//	np.label = "Scale";
-	//	np.defaultValues[0] = 1.0;
-	//	np.minSliders[0] = -10.0;
-	//	np.maxSliders[0] = 10.0;
-
-	//	OP_ParAppendResult res = manager->appendFloat(np);
-	//	assert(res == OP_ParAppendResult::Success);
-	//}
-
-	//// shape
-	//{
-	//	OP_StringParameter	sp;
-
-	//	sp.name = "Shape";
-	//	sp.label = "Shape";
-
-	//	sp.defaultValue = "Cube";
-
-	//	const char *names[] = { "Cube", "Triangle", "Line" };
-	//	const char *labels[] = { "Cube", "Triangle", "Line" };
-
-	//	OP_ParAppendResult res = manager->appendMenu(sp, 3, names, labels);
-	//	assert(res == OP_ParAppendResult::Success);
-	//}
-
-	//// GPU Direct
-	//{
-	//	OP_NumericParameter np;
-
-	//	np.name = "Gpudirect";
-	//	np.label = "GPU Direct";
-
-	//	OP_ParAppendResult res = manager->appendToggle(np);
-	//	assert(res == OP_ParAppendResult::Success);
-	//}
-
-	//// pulse
-	//{
-	//	OP_NumericParameter	np;
-
-	//	np.name = "Reset";
-	//	np.label = "Reset";
-
-	//	OP_ParAppendResult res = manager->appendPulse(np);
-	//	assert(res == OP_ParAppendResult::Success);
-	//}
-	// 
+		OP_ParAppendResult res = manager->appendToggle(np);
+	}
 	// Ip
 	{
 		OP_NumericParameter	np;

@@ -26,6 +26,18 @@
                     "AuthorEmail": "colas@tyrell.studio"
                 }
             }
+        },
+        "4a7f2f70": {
+            "ComputerName": "LAPTOP-FKUG8U9P",
+            "Plugins": {
+                "C:/Users/colas/Documents/tyrell/MadLaserWorkshop/madLaserBridge/touchdesigner/C++/madlaserbridge/touchdesigner/Plugins/MadLaserBridge.dll": {
+                    "Hashes": [
+                        "RagebUuOB05zFytp4O2K+8NfICSjq1r+rkS7bKDVs6CaEjyOwd75jF2BAdl9x5UwUl0Nq804TSC11dbY6IIUcUdH8EikjEhpz5avNLjjimUb+dDPoXR+CR55SU2QazIG"
+                    ],
+                    "AuthorName": "Tyrell",
+                    "AuthorEmail": "colas@tyrell.studio"
+                }
+            }
         }
     }
 }
