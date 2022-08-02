@@ -321,9 +321,6 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 		std::vector<unsigned char> fullData;
 		fullData.reserve(65536);
 
-		// Write Format Data
-		fullData.push_back(GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8);
-
 		// Check that the primitive dat is valid
 		if(validatePrimitiveDat(primitive, sinput->getNumPrimitives()))
 		{
@@ -340,6 +337,9 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			{
 
 				//std::cout << "-------------------- primitive : " << i << std::endl;
+
+                // Write Format Data
+                fullData.push_back(GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8);
 
 				// get the metadata
 				std::map<std::string, float> metadata = getMetadata(primitive, i);
@@ -441,6 +441,11 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 		// Get the Unique identifier from the attribute
 		int uid = inputs->getParInt("Uid");
 
+        unsigned int dataCrc = 0;
+        for (auto v: fullData) {
+            dataCrc += v;
+        }
+        
 		//std::cout << "Uid " << uid << std::endl;
 
 		size_t written = 0;
@@ -456,6 +461,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			header.frameNumber = frameNumber;
 			header.chunkCount = chunksCount;
 			header.chunkNumber = chunkNumber;
+            header.dataCrc = dataCrc;
 
 			// Prepare buffer
 			std::vector<unsigned char> packet;
