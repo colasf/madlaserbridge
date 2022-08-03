@@ -63,14 +63,14 @@ public:
     bool sendTo(const GenericAddr & addr,const void *buf,UINT buflen);
     bool recvFrom(GenericAddr & addr,void * buf,UINT & buflen);
 
-    bool isBinded();
+    bool isInitialized();
 
 private:
     void closeSocket();
 
-    int m_port;
-    SOCKET m_socket;
-    bool m_isBinded;
+    int m_port=0;
+    SOCKET m_socket=INVALID_SOCKET;
+    bool m_isInitialized=false;
 };
 
 #endif
@@ -101,13 +101,14 @@ public:
     bool sendTo(const GenericAddr & addr, const void *buf, unsigned int buflen);
     bool recvFrom(GenericAddr & addr, void * buf, unsigned int & buflen);
 
-    bool isBinded();
+    bool isInitialized();
 
 private:
     void closeSocket();
 
-    struct Pimpl;
-    std::unique_ptr<Pimpl> m_pImpl;
+    int m_port = 0;
+    SOCKET m_socket = INVALID_SOCKET;
+    bool m_isInitialized = false;
 };
 
 #endif

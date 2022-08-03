@@ -12,9 +12,7 @@
 #include <arpa/inet.h>
 
 DatagramSocket::DatagramSocket(UINT interfaceIP, UINT port):
-    m_port(port),
-    m_socket(INVALID_SOCKET),
-    m_isBinded(false)
+    m_port(port)
 {
     m_socket = socket(AF_INET,SOCK_DGRAM,0);
     if (m_socket==INVALID_SOCKET) {
@@ -71,7 +69,7 @@ DatagramSocket::DatagramSocket(UINT interfaceIP, UINT port):
         return;
     }
 
-    m_isBinded = true;
+    m_isInitialized = true;
 }
 
 DatagramSocket::~DatagramSocket()
@@ -88,9 +86,9 @@ void DatagramSocket::closeSocket()
     }
 }
 
-bool DatagramSocket::isBinded()
+bool DatagramSocket::isInitialized()
 {
-    return ((m_socket != INVALID_SOCKET) && m_isBinded);
+    return ((m_socket != INVALID_SOCKET) && m_isInitialized);
 }
 
 bool DatagramSocket::joinMulticastGroup(UINT ip, UINT interfaceIP) {
@@ -224,16 +222,9 @@ bool DatagramSocket::recvFrom(GenericAddr & addr,void * buf,UINT & buflen)
 
 #include <cassert>
 
-struct DatagramSocket::Pimpl {
-    int m_port = 0;
-    SOCKET m_socket=INVALID_SOCKET;
-    bool m_isBinded=false;
-};
-
-DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port):
-    m_pImpl(new Pimpl())
+DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port)
 {
-    m_pImpl->m_port = port;
+    m_port = port;
 
     static bool wsaStartedUp = false;
     if (wsaStartedUp == false) {
@@ -243,8 +234,8 @@ DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port):
     }
 
     // create socket
-    m_pImpl->m_socket=socket ( AF_INET, SOCK_DGRAM, 0 );
-    if (INVALID_SOCKET ==  m_pImpl->m_socket) {
+    m_socket=socket ( AF_INET, SOCK_DGRAM, 0 );
+    if (INVALID_SOCKET ==  m_socket) {
         std::cout << "Error: Could not create DatagramSocket" << std::endl;
         closeSocket();
         return;
@@ -252,7 +243,7 @@ DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port):
 
     // enable bradcast
     BOOL fBroadcast=1;
-    int err = setsockopt(m_pImpl->m_socket,SOL_SOCKET,
+    int err = setsockopt(m_socket,SOL_SOCKET,
             SO_BROADCAST,(CHAR *)&fBroadcast,
             sizeof(BOOL));
     if ( SOCKET_ERROR == err ) {
@@ -263,7 +254,7 @@ DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port):
 
     // reuseaddr
     BOOL fReUseAddr=1;
-    err = setsockopt(m_pImpl->m_socket,SOL_SOCKET,
+    err = setsockopt(m_socket,SOL_SOCKET,
             SO_REUSEADDR,(CHAR *)&fReUseAddr,
             sizeof(BOOL));
     if ( SOCKET_ERROR == err ) {
@@ -272,7 +263,7 @@ DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port):
 
     // non blocking
     unsigned long value = 1;
-    err = ioctlsocket(m_pImpl->m_socket, FIONBIO, &value);
+    err = ioctlsocket(m_socket, FIONBIO, &value);
     if ( SOCKET_ERROR == err ) {
         std::cout << "Error: Could not set DatagramSocket FIONBIO value" << std::endl;
         closeSocket();
@@ -281,7 +272,7 @@ DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port):
 
     // increase buffer size
     int bufLen = 200000;
-    err = setsockopt(m_pImpl->m_socket, SOL_SOCKET, SO_RCVBUF, (CHAR *)&bufLen, sizeof(bufLen));
+    err = setsockopt(m_socket, SOL_SOCKET, SO_RCVBUF, (CHAR *)&bufLen, sizeof(bufLen));
     if ( SOCKET_ERROR == err ) {
         std::cout << "Error: Could not set DatagramSocket SO_RCVBUF option" << std::endl;
     }
@@ -291,8 +282,8 @@ DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port):
     SOCKADDR_IN own;
     own.sin_family = AF_INET;
     own.sin_addr.s_addr = htonl ( interfaceIP );
-    own.sin_port = htons ( m_pImpl->m_port );
-    err = bind (m_pImpl->m_socket, (SOCKADDR *) &own, sizeof (SOCKADDR_IN) );
+    own.sin_port = htons ( m_port );
+    err = bind (m_socket, (SOCKADDR *) &own, sizeof (SOCKADDR_IN) );
     if (err != 0) {
         assert(false);
         std::cout << "Failed to bind datagram socket" << std::endl;
@@ -303,7 +294,7 @@ DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port):
         }
     }
 
-    m_pImpl->m_isBinded = true;
+    m_isInitialized = true;
 }
 
 DatagramSocket::~DatagramSocket()
@@ -313,15 +304,15 @@ DatagramSocket::~DatagramSocket()
 
 void DatagramSocket::closeSocket()
 {
-    if (INVALID_SOCKET!=m_pImpl->m_socket) {
-        closesocket(m_pImpl->m_socket);
-        m_pImpl->m_socket=INVALID_SOCKET;
+    if (INVALID_SOCKET!=m_socket) {
+        closesocket(m_socket);
+        m_socket=INVALID_SOCKET;
     }
 }
 
-bool DatagramSocket::isBinded()
+bool DatagramSocket::isInitialized()
 {
-    return (INVALID_SOCKET!=m_pImpl->m_socket ) && m_pImpl->m_isBinded;
+    return m_isInitialized;
 }
 
 bool DatagramSocket::joinMulticastGroup(UINT ip, unsigned int interfaceIP) {
@@ -330,7 +321,7 @@ bool DatagramSocket::joinMulticastGroup(UINT ip, unsigned int interfaceIP) {
 
     int ttl = 64; // Limits to same region
     if (setsockopt(
-        m_pImpl->m_socket,
+        m_socket,
         IPPROTO_IP,
         IP_MULTICAST_TTL,
         (char *)&ttl,
@@ -348,7 +339,7 @@ bool DatagramSocket::joinMulticastGroup(UINT ip, unsigned int interfaceIP) {
     // Join the multicast group from which to receive datagrams.
     mreq.imr_multiaddr.s_addr = htonl(ip);
     mreq.imr_interface.s_addr = htonl(interfaceIP);
-    if (setsockopt (m_pImpl->m_socket,
+    if (setsockopt (m_socket,
                     IPPROTO_IP,
                     IP_ADD_MEMBERSHIP,
                     (char FAR *)&mreq,
@@ -379,7 +370,7 @@ bool DatagramSocket::leaveMulticastGroup(UINT ip, unsigned int interfaceIP) {
     // Join the multicast group from which to receive datagrams.
     mreq.imr_multiaddr.s_addr = htonl(ip);
     mreq.imr_interface.s_addr = htonl(interfaceIP);
-    if (setsockopt (m_pImpl->m_socket,
+    if (setsockopt (m_socket,
                     IPPROTO_IP,
                     IP_DROP_SOURCE_MEMBERSHIP,
                     (char FAR *)&mreq,
@@ -405,7 +396,7 @@ bool DatagramSocket::sendBroadcast(UINT port,void * buf,UINT buflen)
     target.sin_family = AF_INET;
     target.sin_addr.s_addr=htonl ( INADDR_BROADCAST );
     target.sin_port = htons ( port );
-    int res = sendto(m_pImpl->m_socket,
+    int res = sendto(m_socket,
         (char*)buf,buflen,0,
         (SOCKADDR *) &target, sizeof ( SOCKADDR_IN ));
     if (res != buflen)
@@ -426,7 +417,7 @@ bool DatagramSocket::sendTo(const GenericAddr & addr,const void *buf,UINT buflen
     target.sin_family = addr.family;
     target.sin_addr.s_addr= htonl(addr.ip);
     target.sin_port = htons(addr.port);
-    int res = sendto(m_pImpl->m_socket,(char*) buf,buflen,0,(SOCKADDR *) &target, sizeof ( SOCKADDR_IN ));
+    int res = sendto(m_socket,(char*) buf,buflen,0,(SOCKADDR *) &target, sizeof ( SOCKADDR_IN ));
     if (res != buflen)
     {
         int osErr = WSAGetLastError();
@@ -450,9 +441,9 @@ bool DatagramSocket::recvFrom(GenericAddr & addr,void * buf,UINT & buflen)
     SOCKADDR_IN source;
     source.sin_family = AF_INET;
     source.sin_addr.s_addr = htonl(INADDR_ANY);
-    source.sin_port = htons(m_pImpl->m_port);
+    source.sin_port = htons(m_port);
     int nSize = sizeof ( SOCKADDR_IN );
-    buflen = recvfrom (m_pImpl->m_socket,(char*)buf,buflen,0,(SOCKADDR FAR *) &source,&nSize);
+    buflen = recvfrom (m_socket,(char*)buf,buflen,0,(SOCKADDR FAR *) &source,&nSize);
 
     if (buflen == SOCKET_ERROR)
     {

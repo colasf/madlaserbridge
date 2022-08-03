@@ -40,7 +40,8 @@
 				C9939CFB282AE79B00381246 /* DatagramSocket.cpp */,
 				C9939CFC282AE79B00381246 /* DatagramSocket.h */,
 			);
-			path = DatagramSocket;
+			name = DatagramSocket;
+			path = ../Common/Cpp/DatagramSocket;
 			sourceTree = "<group>";
 		};
 		E227271E21B6FEB100905532 = {
@@ -266,6 +267,10 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = (
+					../Common/Cpp,
+					../Common/Cpp/DatagramSocket,
+				);
 				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
 				INSTALL_PATH = /;
 				PRODUCT_BUNDLE_IDENTIFIER = ca.derivative.cpp.MadLaserBrigde;
@@ -279,6 +284,10 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = (
+					../Common/Cpp,
+					../Common/Cpp/DatagramSocket,
+				);
 				INFOPLIST_FILE = "$(SRCROOT)/Info.plist";
 				INSTALL_PATH = /;
 				PRODUCT_BUNDLE_IDENTIFIER = ca.derivative.cpp.MadLaserBrigde;

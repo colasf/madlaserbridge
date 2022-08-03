@@ -38,6 +38,19 @@
                     "AuthorEmail": "colas@tyrell.studio"
                 }
             }
+        },
+        "88177d36": {
+            "ComputerName": "matthieus-macbook-pro.local",
+            "Plugins": {
+                "/Users/matt/Documents/GitHub/madlaserbridge/touchdesigner/Plugins/MadLaserBrigde.plugin": {
+                    "Hashes": [
+                        "nQQ4ruViRvrfCtDMwXdQL5tjYDW/SsXJUB5gH268u6Zn4VBeFiDumE+G1jWUchWPni89WRYdv0Zv2+fz70W5+19Z6TW0QcbL/SX5ESILlS32c6/b9Ey+PtguGAd2etnSwzXtkYk6prZBMQqZsG+AbEotHt4l2tAJINMejTvUghMpKx4T86J6cXMQVzzE7tT859VFEjiN5AWaIJjIeCPlfSEIM4bY4HRvZrRD+zfBkDu5UHS+sD9dsmFg/GZMl/Z8W6DL0AdoGbcpo2ljnV53FM7skHhrgVR6xoYKYjmoKWNgJw8XE1WqLVol+Vgm2bDmbsyKpuHkdOqxqLL3vC4NiQ==",
+                        "YAlGqm+k+ufsS0DvXGoLpWNPsR24L0zhsFH8HYQqI/5R4elRoZ4T5Q/n0kQTapTy5PKcAyv+UTNc9KyVPH9mFJIR5IBAbkD7ea17OaCDskNgzF0ZSN5g8pxaG/OjI8l4GROwpQwG3DS9Is4gfGpReReG1TC+I13a8u2oN0kNqjCvAB1swFkqDVEB6KQGtLg/g+neZRbtPFjzlAbzJc+efuAagkacjoEUmKyA7XzZo8vVptt+/LEqZI9xkhP6CBXI5GE+b7dkzOs9y7AD3okkoxccTldi909yGYRN5PfFuVbSNCjbJglcSnJ6yvRihSA4yS5gaGk73CrYiE1oVEakvA=="
+                    ],
+                    "AuthorName": "Tyrell",
+                    "AuthorEmail": "colas@tyrell.studio"
+                }
+            }
         }
     }
 }
