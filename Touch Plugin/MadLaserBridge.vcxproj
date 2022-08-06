@@ -48,10 +48,10 @@
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>E:\projects\madLaserBridge\touchdesigner\C++\madlaserbridge\Common\Cpp;$(IncludePath)</IncludePath>
+    <IncludePath>..\Common\Cpp;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>E:\projects\madLaserBridge\touchdesigner\C++\madlaserbridge\Common\Cpp;$(IncludePath)</IncludePath>
+    <IncludePath>..\Common\Cpp;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
