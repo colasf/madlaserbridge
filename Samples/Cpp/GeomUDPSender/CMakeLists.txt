@@ -6,14 +6,14 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SOURCES
-    ../../Common/Cpp/DatagramSocket/DatagramSocket.cpp
+    ../../../Common/Cpp/DatagramSocket/DatagramSocket.cpp
     main.cpp
 )
 set(HEADERS
-    ../../Common/Cpp/DatagramSocket/DatagramSocket.h
+    ../../../Common/Cpp/DatagramSocket/DatagramSocket.h
 )
 
 add_executable(GeomUDPSender ${SOURCES} ${HEADERS})
-target_include_directories(GeomUDPSender PRIVATE "../../Common/Cpp/")
+target_include_directories(GeomUDPSender PRIVATE "../../../Common/Cpp/")
 
 
