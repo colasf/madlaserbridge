@@ -47,6 +47,12 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Configuration)\</IntDir>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>E:\projects\madLaserBridge\touchdesigner\C++\madlaserbridge\Common\Cpp;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>E:\projects\madLaserBridge\touchdesigner\C++\madlaserbridge\Common\Cpp;$(IncludePath)</IncludePath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
@@ -80,13 +86,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DatagramSocket\DatagramSocket.cpp" />
+    <ClCompile Include="..\Common\Cpp\DatagramSocket\DatagramSocket.cpp" />
     <ClCompile Include="MadLaserBridge.cpp">
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">WIN32;_DEBUG;_WINDOWS;_USRDLL;SIMPLESHAPES_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DatagramSocket\DatagramSocket.h" />
+    <ClInclude Include="..\Common\Cpp\DatagramSocket\DatagramSocket.h" />
+    <ClInclude Include="..\Common\Cpp\UdpGeomDefs.h" />
     <ClInclude Include="MadLaserBridge.h" />
     <ClInclude Include="CPlusPlus_Common.h" />
     <ClInclude Include="GL_Extensions.h" />
