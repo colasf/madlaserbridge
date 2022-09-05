@@ -1,7 +1,12 @@
 #include "DatagramSocket.h"
 #include <cstring>
-#include "errno.h"
 #include <iostream>
+#include <string>
+
+inline std::string ipIntToStr(unsigned int ip) {
+  return std::to_string((ip >> 24) & 0xFF) + '.' + std::to_string((ip >> 16) & 0xFF) + '.' +
+          std::to_string((ip >> 8) & 0xFF) + '.' + std::to_string(ip & 0xFF);
+}
 
 /*********************************************************************************
   UNIX version
@@ -10,6 +15,7 @@
 #if defined(__linux__) || defined (__APPLE__)
 
 #include <arpa/inet.h>
+#include "errno.h"
 
 DatagramSocket::DatagramSocket(UINT interfaceIP, UINT port):
     m_port(port)

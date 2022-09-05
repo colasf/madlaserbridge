@@ -64,8 +64,8 @@ private:
     void pushFloat32(std::vector<unsigned char>& fullData, float value);
 	void pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], int value);
 	void pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], float value);
-    void pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor);
-    void pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor);
+    void pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor);
+    void pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor);
 	bool validatePrimitiveDat(const OP_DATInput* primitive, int numPrimitive);
 	std::map<std::string, float> getMetadata(const OP_DATInput* primitive, int primitiveIndex);
 

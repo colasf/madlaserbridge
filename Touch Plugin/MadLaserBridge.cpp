@@ -148,15 +148,15 @@ void MadLaserBridge::pushMetaData(std::vector<unsigned char>& fullData, const ch
 	push32bits(fullData, *(int*)&value);
 }
 
-void MadLaserBridge::pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor) {
+void MadLaserBridge::pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor) {
     pushFloat32(fullData, pointPosition.x);
     pushFloat32(fullData, pointPosition.y);
-    fullData.push_back(static_cast<unsigned char>(pointColor.r*255));
-    fullData.push_back(static_cast<unsigned char>(pointColor.g*255));
-    fullData.push_back(static_cast<unsigned char>(pointColor.b*255));
+    fullData.push_back(static_cast<unsigned char>(std::min(std::max(pointColor.r,0.f),1.f)*255));
+    fullData.push_back(static_cast<unsigned char>(std::min(std::max(pointColor.g,0.f),1.f)*255));
+    fullData.push_back(static_cast<unsigned char>(std::min(std::max(pointColor.b,0.f),1.f)*255));
 }
 
-void MadLaserBridge::pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, Position& pointPosition, Color& pointColor) {
+void MadLaserBridge::pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor) {
     if (pointPosition.x < -1 || pointPosition.x > 1 || pointPosition.y < -1 || pointPosition.y > 1) {
         // Clamp position and set color = 0
         unsigned short x16Bits, y16Bits;
@@ -327,22 +327,19 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			const Position* ptArr = sinput->getPointPositions();
 			const Color* colors = nullptr;
 
-			if (sinput->hasColors())
-			{
+			if (sinput->hasColors()) {
 				colors = sinput->getColors()->colors;
 			}
 
-
-			for (int i = 0; i < sinput->getNumPrimitives(); i++)
+			for (int primitiveNumber = 0; primitiveNumber < sinput->getNumPrimitives(); primitiveNumber++)
 			{
-
 				//std::cout << "-------------------- primitive : " << i << std::endl;
 
                 // Write Format Data
                 fullData.push_back(GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8);
 
 				// get the metadata
-				std::map<std::string, float> metadata = getMetadata(primitive, i);
+				std::map<std::string, float> metadata = getMetadata(primitive, primitiveNumber);
 
 				// Write meta data count
 				fullData.push_back(metadata.size());
@@ -354,66 +351,37 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 					pushMetaData(fullData, charMetadata, kv.second);
 				}
 
-
-				const SOP_PrimitiveInfo primInfo = sinput->getPrimitive(i);
+				const SOP_PrimitiveInfo primInfo = sinput->getPrimitive(primitiveNumber);
 
 				const int32_t* primVert = primInfo.pointIndices;
-				//std::cout << primInfo.numVertices << std::endl;
 
 				int numPoints = primInfo.numVertices;
 
 				// check if the primitve is closed
 				bool isClosed = false;
-				if (strcmp(primitive->getCell(i+1, 2), "1") == 0) {
-					//std::cout << "primitive is close" << std::endl;
-
+				if (strcmp(primitive->getCell(primitiveNumber+1, 2), "1") == 0) {
 					isClosed = true;
 
-					// add one point to the count
-					numPoints += 1;
-				}
+                    // Write point count
+                    push16bits(fullData, numPoints+1);
+                } else {
+                    push16bits(fullData, numPoints);
+                }
 
-				//std::cout << numPoints << std::endl;
-
-				// Write point count
-				push16bits(fullData, numPoints);
-
-				for (int j = 0; j < primInfo.numVertices; j++) {
-
-					//std::cout << j << std::endl;
-					Position pointPosition = cameraTransProj * ptArr[primVert[j]];
-
-					//std::cout << "x : " << pointPosition.x << " y : " << pointPosition.y << " z : " << pointPosition.z << std::endl;
-
-					
-					Color pointColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-                    if (sinput->hasColors()) {
-						pointColor = colors[primVert[j]];
-
-						//std::cout << "r : " << pointColor.r << " g : " << pointColor.g << " b : " << pointColor.b << " a : " << pointColor.a << std::endl;
-					}
-
-					pushPoint_XY_F32_RGB_U8(fullData, pointPosition, pointColor);
-
+                static const Color s_white(1.0f, 1.0f, 1.0f, 1.0f);
+                
+				for (int pointNumber = 0; pointNumber < numPoints; pointNumber++) {
+					Position pointPosition = cameraTransProj * ptArr[primVert[pointNumber]];
+					pushPoint_XY_F32_RGB_U8(fullData, pointPosition, sinput->hasColors()?colors[primVert[pointNumber]]:s_white);
 				}
 
 				// If the primitive is close add the first point at the end
-				if (isClosed)
-				{
+				if (isClosed) {
 					Position pointPosition = cameraTransProj * ptArr[primVert[0]];
-
-					Color pointColor(1.0f, 1.0f, 1.0f, 1.0f);
-
-					if (sinput->hasColors()) {
-						pointColor = colors[primVert[0]];
-                    }
-
-                    pushPoint_XY_F32_RGB_U8(fullData, pointPosition, pointColor);
+                    pushPoint_XY_F32_RGB_U8(fullData, pointPosition, sinput->hasColors()?colors[primVert[0]]:s_white);
 
 				}
 			}
-
 		}
 		else
 		{
@@ -432,21 +400,15 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 		int ip[4];
 		inputs->getParInt4("Netaddress", ip[0], ip[1], ip[2], ip[3]);
 
-		//std::cout << "Ip " 
-			//<< std::to_string(ip[0]) << "." 
-			//<< std::to_string(ip[1]) << "."
-			//<< std::to_string(ip[2]) << "."
-			//<< std::to_string(ip[3]) << std::endl;
-
 		// Get the Unique identifier from the attribute
 		int uid = inputs->getParInt("Uid");
+		//std::cout << "Uid " << uid << std::endl;
 
+        // Compute packet CRC
         unsigned int dataCrc = 0;
         for (auto v: fullData) {
             dataCrc += v;
         }
-        
-		//std::cout << "Uid " << uid << std::endl;
 
 		size_t written = 0;
 		unsigned char chunkNumber = 0;
@@ -465,7 +427,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 
 			// Prepare buffer
 			std::vector<unsigned char> packet;
-			size_t dataBytesForThisChunk = std::min<size_t>(fullData.size() - written, GEOM_UDP_MAX_DATA_BYTES_PER_PACKET);
+			size_t dataBytesForThisChunk = std::min<size_t>(fullData.size() - written, GEOM_UDP_MAX_DATA_BYTES_PER_PACKET-sizeof(GeomUdpHeader));
 			packet.resize(sizeof(GeomUdpHeader) + dataBytesForThisChunk);
 			// Write header
 			memcpy(&packet[0], &header, sizeof(GeomUdpHeader));
@@ -481,16 +443,14 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			// Unicast on localhost
 			destAddr.ip = ((ip[0] << 24) + (ip[1] << 16) + (ip[2] << 8) + ip[3]);
 			destAddr.port = GEOM_UDP_PORT;
-			socket->sendTo(destAddr, &packet.front(), static_cast<unsigned int>(packet.size()));
+			socket->sendTo(destAddr, &packet[0], static_cast<unsigned int>(packet.size()));
 
 			chunkNumber++;
 		}
 
 		//std::cout << "Sent frame " << std::to_string(frameNumber) << std::endl;
 
-		animTime += 1 / 60.;
 		frameNumber++;
-
 	}
 
 }
@@ -637,6 +597,7 @@ MadLaserBridge::setupParameters(OP_ParameterManager* manager, void* reserved)
 		np.label = "Active";
 
 		OP_ParAppendResult res = manager->appendToggle(np);
+        assert(res == OP_ParAppendResult::Success);
 	}
 	// Ip
 	{
@@ -664,7 +625,7 @@ MadLaserBridge::setupParameters(OP_ParameterManager* manager, void* reserved)
 		np.defaultValues[3] = 1;
 
 		OP_ParAppendResult res = manager->appendInt(np, 4);
-
+        assert(res == OP_ParAppendResult::Success);
 	}
 
 	// Unique ID
@@ -675,6 +636,7 @@ MadLaserBridge::setupParameters(OP_ParameterManager* manager, void* reserved)
 		np.label = "Unique ID";
 
 		OP_ParAppendResult res = manager->appendInt(np, 1);
+        assert(res == OP_ParAppendResult::Success);
 	}
 
 	// Primitive data
