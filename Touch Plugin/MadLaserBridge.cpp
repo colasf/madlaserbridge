@@ -151,9 +151,10 @@ void MadLaserBridge::pushMetaData(std::vector<unsigned char>& fullData, const ch
 void MadLaserBridge::pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor) {
     pushFloat32(fullData, pointPosition.x);
     pushFloat32(fullData, pointPosition.y);
-    fullData.push_back(static_cast<unsigned char>(std::min(std::max(pointColor.r,0.f),1.f)*255));
-    fullData.push_back(static_cast<unsigned char>(std::min(std::max(pointColor.g,0.f),1.f)*255));
-    fullData.push_back(static_cast<unsigned char>(std::min(std::max(pointColor.b,0.f),1.f)*255));
+	#define CLAMP_IN_ZERO_ONE(x) (x<0?0:(x>1?1:x))
+    fullData.push_back(static_cast<unsigned char>(CLAMP_IN_ZERO_ONE(pointColor.r)*255));
+    fullData.push_back(static_cast<unsigned char>(CLAMP_IN_ZERO_ONE(pointColor.g)*255));
+    fullData.push_back(static_cast<unsigned char>(CLAMP_IN_ZERO_ONE(pointColor.b)*255));
 }
 
 void MadLaserBridge::pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor) {
