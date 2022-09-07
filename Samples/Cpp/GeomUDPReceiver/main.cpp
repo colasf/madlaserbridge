@@ -22,6 +22,7 @@ int main()
     // Protocol supports up to 255 chunks
     // We'll accept received data chunks in the wrong order though I doubt it should happen
     int currentFrameChunkCount = -1;
+    int currentFrameDataCrc = -1;
     std::vector<bool> chunksDataHasBeenReceived;
     std::vector<std::vector<unsigned char>> chunksData;
     chunksDataHasBeenReceived.resize(255);
@@ -32,7 +33,6 @@ int main()
         unsigned int bufferSize = static_cast<unsigned int>(sizeof(buffer));
 
         GenericAddr sourceAddr;
-        memset(&sourceAddr,0,sizeof(sourceAddr));
         if (!socket.recvFrom(sourceAddr, buffer, bufferSize)) {
             assert(false); // Should never happen
             return -1;
@@ -76,6 +76,9 @@ int main()
                       << " but we haved received all chunks from frame number " << std::to_string(currentFrameNumber)
                       << ". Resetting chunks data" << std::endl;
             assert(false);
+            // Reset state. Note that ideally we shouldn't skip all chunks from a frame if we receive the first chunk
+            // of next frame before last chunk of previous frame, but keep the sample code simple (we should keep received chunks
+            // for the 256 possible frame number) - a frame will generally fit a single chunk / UDP packet and this case should rarely happen
             for (auto& chunkData: chunksData) {
                 chunkData.clear();
             }
@@ -84,26 +87,40 @@ int main()
             }
             currentFrameNumber = -1;
         }
-        // If we're actually reading a frame, ensure chunkCount doesn't change (buggy sender)
+
+        // If we're actually reading a frame, ensure chunkCount doesn't change accross same frame headers (buggy sender)
         if (currentFrameNumber != -1 && currentFrameChunkCount != header->chunkCount) {
             std::cout << "Error: received a new chunk for a frame with a different chunk count" << std::endl;
             assert(false);
         }
+
+        // If we're actually reading a frame, ensure dataCrc doesn't change (buggy sender)
+        if (currentFrameNumber != -1 && currentFrameDataCrc != header->dataCrc) {
+            std::cout << "Error: received a new chunk for a frame with a different data CRC" << std::endl;
+            assert(false);
+        }
+
         currentFrameNumber = header->frameNumber;
         currentFrameChunkCount = header->chunkCount;
+        currentFrameDataCrc = header->dataCrc;
 
         // Check Chunk Count
         if (header->chunkCount == 0) {
             std::cout << "Error in frame, chunk count is zero" << std::endl;
+            assert(false);
         }
 
         // Check Chunk number
         if (header->chunkNumber >= header->chunkCount) {
+            // Sender is buggy
             std::cout << "Error in frame, chunk number (" << std::to_string(header->chunkNumber) << ") is over chunk count (" << std::to_string(header->chunkCount) << ")" << std::endl;
+            assert(false);
             continue;
         }
         if (!chunksData[header->chunkNumber].empty()) {
+            // Buggy sender or dying network
             std::cout << "Error in frame, we already received data for chunk " << std::to_string(header->chunkNumber) << std::endl;
+            assert(false);
         }
 
         // Now read data
@@ -113,6 +130,7 @@ int main()
             chunksData[header->chunkNumber].push_back(buffer[bufferOffset++]);
         }
         chunksDataHasBeenReceived[header->chunkNumber] = true;
+
         //std::cout << "Received chunk " << std::to_string(chunkNumber) << "/" << std::to_string(chunkCount) << " for frame " << std::to_string(frameNumber) << std::endl;
 
         // If we received all frame chunks, log the frame
@@ -125,7 +143,7 @@ int main()
         }
 
         if (receivedAllChunksYet) {
-            // Put all frame data together
+            // Put all frame data together in a single buffer
             std::vector<unsigned char> allData;
             allData.reserve(255*GEOM_UDP_MAX_DATA_BYTES_PER_PACKET);
             for (int i=0; i<header->chunkCount; i++) {
@@ -146,6 +164,18 @@ int main()
             const auto dataSize = allData.size();
             if (dataSize < 1) {
                 std::cout << "Error: frame data is empty";
+                assert(false);
+                continue;
+            }
+
+            // Check Data CRC
+            int computedCrc = 0;
+            for (auto v: allData) {
+                computedCrc += v;
+            }
+            if (computedCrc != header->dataCrc) {
+                std::cout << "Error: invalid data CRC, ignoring frame";
+                assert(false);
                 continue;
             }
 
@@ -159,6 +189,7 @@ int main()
                 std::vector<Point> points;
             };
 
+            // Loop over pathes until there's no more data to read
             std::vector<Path> pathes;
             while (dataOffset < dataSize) {
                 // Read data format
@@ -184,10 +215,9 @@ int main()
                     // should check meta value is in acceptable range
                     std::string metaName((char*)&allData[dataOffset],8);
                     dataOffset += 8;
-                    const auto intValue = *reinterpret_cast<int*>(&allData[dataOffset]);
                     const auto floatValue = *reinterpret_cast<float*>(&allData[dataOffset]);
                     dataOffset += 4;
-                    std::cout << "Path Meta " << metaName << " = " << intValue << " if integer or " << floatValue << " if floating point" << std::endl;
+                    std::cout << "Path Meta " << metaName << " = " << floatValue << std::endl;
                 }
 
                 // Read Point Count
@@ -250,6 +280,8 @@ int main()
 
                     path.points.push_back(point);
                 }
+
+                pathes.push_back(path); // Note that this is very inefficient
             }
 
             assert(dataOffset == dataSize);

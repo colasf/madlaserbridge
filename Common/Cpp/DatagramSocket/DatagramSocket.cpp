@@ -1,12 +1,7 @@
 #include "DatagramSocket.h"
 #include <cstring>
+#include "errno.h"
 #include <iostream>
-#include <string>
-
-inline std::string ipIntToStr(unsigned int ip) {
-  return std::to_string((ip >> 24) & 0xFF) + '.' + std::to_string((ip >> 16) & 0xFF) + '.' +
-          std::to_string((ip >> 8) & 0xFF) + '.' + std::to_string(ip & 0xFF);
-}
 
 /*********************************************************************************
   UNIX version
@@ -15,9 +10,8 @@ inline std::string ipIntToStr(unsigned int ip) {
 #if defined(__linux__) || defined (__APPLE__)
 
 #include <arpa/inet.h>
-#include "errno.h"
 
-DatagramSocket::DatagramSocket(UINT interfaceIP, UINT port):
+DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port):
     m_port(port)
 {
     m_socket = socket(AF_INET,SOCK_DGRAM,0);
@@ -59,7 +53,7 @@ DatagramSocket::DatagramSocket(UINT interfaceIP, UINT port):
     }
 
     // set non blocking
-    if (fcntl(m_socket,F_SETFL,O_NONBLOCK)<0) {
+    if (fcntl(m_socket,F_SETFL,O_NONBLOCK) < 0) {
         std::cout << "Error setting O_NONBLOCK option" << std::endl;
         assert(false);
         closeSocket();
@@ -74,8 +68,6 @@ DatagramSocket::DatagramSocket(UINT interfaceIP, UINT port):
         closeSocket();
         return;
     }
-
-    m_isInitialized = true;
 }
 
 DatagramSocket::~DatagramSocket()
@@ -85,8 +77,7 @@ DatagramSocket::~DatagramSocket()
 
 void DatagramSocket::closeSocket()
 {
-    if(m_socket!=INVALID_SOCKET)
-    {
+    if (m_socket != INVALID_SOCKET) {
         close(m_socket);
         m_socket = INVALID_SOCKET;
     }
@@ -94,17 +85,16 @@ void DatagramSocket::closeSocket()
 
 bool DatagramSocket::isInitialized()
 {
-    return ((m_socket != INVALID_SOCKET) && m_isInitialized);
+    return (m_socket != INVALID_SOCKET);
 }
 
-bool DatagramSocket::joinMulticastGroup(UINT ip, UINT interfaceIP) {
+bool DatagramSocket::joinMulticastGroup(unsigned int ip, unsigned int interfaceIP) {
     int res = 0;
 
     // Set TTL (Time To Live)
     int ttl = 127;
     res = setsockopt(m_socket,IPPROTO_IP,IP_MULTICAST_TTL,&ttl,sizeof(ttl));
-    if (res < 0)
-    {
+    if (res < 0) {
         std::cout << "Error in DatagramSocket: could not set TTL, error: " << strerror(errno) << std::endl;
         assert(false);
     }
@@ -126,7 +116,7 @@ bool DatagramSocket::joinMulticastGroup(UINT ip, UINT interfaceIP) {
     return true;
 }
 
-bool DatagramSocket::leaveMulticastGroup(UINT ip, UINT interfaceIP) {
+bool DatagramSocket::leaveMulticastGroup(unsigned int ip, unsigned int interfaceIP) {
     int res = 0;
 
     struct ip_mreq mreq;
@@ -142,7 +132,7 @@ bool DatagramSocket::leaveMulticastGroup(UINT ip, UINT interfaceIP) {
     return true;
 }
 
-bool DatagramSocket::sendBroadcast(UINT port,void * buf,UINT buflen)
+bool DatagramSocket::sendBroadcast(unsigned int port,void * buf,unsigned int buflen)
 {
     SOCKADDR_IN to;
     memset(&to,0,sizeof(to));
@@ -154,10 +144,10 @@ bool DatagramSocket::sendBroadcast(UINT port,void * buf,UINT buflen)
     if (ret<0) {
         std::cout << "Error in DatagramSocket: sendto error: " << strerror(errno) << std::endl;
     }
-    return ((UINT)ret == buflen);
+    return ((unsigned int)ret == buflen);
 }
 
-bool DatagramSocket::sendTo(const GenericAddr & addr,const void *buf,UINT buflen)
+bool DatagramSocket::sendTo(const GenericAddr & addr,const void *buf,unsigned int buflen)
 {
     if (buflen == 0) {
         assert(false);
@@ -174,10 +164,10 @@ bool DatagramSocket::sendTo(const GenericAddr & addr,const void *buf,UINT buflen
     if (ret<=0) {
         std::cout << "Error in DatagramSocket: sendto error: " << strerror(errno) << " on interface " << ipIntToStr(addr.ip) << std::endl;
     }
-    return ((UINT)ret == buflen);
+    return ((unsigned int)ret == buflen);
 }
 
-bool DatagramSocket::recvFrom(GenericAddr & addr,void * buf,UINT & buflen)
+bool DatagramSocket::recvFrom(GenericAddr & addr,void * buf,unsigned int & buflen)
 {
     SOCKADDR_IN from;
     memset((void*)&from,0,sizeof(from));
@@ -291,16 +281,13 @@ DatagramSocket::DatagramSocket(unsigned int interfaceIP, unsigned int port)
     own.sin_port = htons ( m_port );
     err = bind (m_socket, (SOCKADDR *) &own, sizeof (SOCKADDR_IN) );
     if (err != 0) {
-        assert(false);
-        std::cout << "Failed to bind datagram socket" << std::endl;
-        assert(false);
         if (port != 0) {
+            std::cout << "Failed to bind datagram socket" << std::endl;
+            assert(false);
             closeSocket();
             return;
         }
     }
-
-    m_isInitialized = true;
 }
 
 DatagramSocket::~DatagramSocket()
@@ -310,20 +297,19 @@ DatagramSocket::~DatagramSocket()
 
 void DatagramSocket::closeSocket()
 {
-    if (INVALID_SOCKET!=m_socket) {
+    if (m_socket != INVALID_SOCKET) {
         closesocket(m_socket);
-        m_socket=INVALID_SOCKET;
+        m_socket = INVALID_SOCKET;
     }
 }
 
 bool DatagramSocket::isInitialized()
 {
-    return m_isInitialized;
+    return m_socket != INVALID_SOCKET;
 }
 
-bool DatagramSocket::joinMulticastGroup(UINT ip, unsigned int interfaceIP) {
+bool DatagramSocket::joinMulticastGroup(unsigned int ip, unsigned int interfaceIP) {
     struct ip_mreq mreq;
-    int osErr = 0;
 
     int ttl = 64; // Limits to same region
     if (setsockopt(
@@ -333,7 +319,7 @@ bool DatagramSocket::joinMulticastGroup(UINT ip, unsigned int interfaceIP) {
         (char *)&ttl,
         sizeof(ttl)) == SOCKET_ERROR)
     {
-        osErr = WSAGetLastError();
+        int osErr = WSAGetLastError();
         std::cout << "Error in DatagramSocket: could not set IP_MULTICAST_TTL (error " << std::to_string(osErr) << ")" << std::endl;
         assert(false);
     }
@@ -351,7 +337,7 @@ bool DatagramSocket::joinMulticastGroup(UINT ip, unsigned int interfaceIP) {
                     (char FAR *)&mreq,
                     sizeof (mreq)) == SOCKET_ERROR)
     {
-        osErr = WSAGetLastError();
+        int osErr = WSAGetLastError();
 
         // WSAEADDRNOTAVAIL error means that we already joined this group
         if (osErr != WSAEADDRNOTAVAIL)
@@ -365,15 +351,13 @@ bool DatagramSocket::joinMulticastGroup(UINT ip, unsigned int interfaceIP) {
     return true;
 }
 
-bool DatagramSocket::leaveMulticastGroup(UINT ip, unsigned int interfaceIP) {
-    struct ip_mreq mreq;
-    int osErr = 0;
-
+bool DatagramSocket::leaveMulticastGroup(unsigned int ip, unsigned int interfaceIP) {
     #ifndef IP_DROP_SOURCE_MEMBERSHIP
-    #define IP_DROP_SOURCE_MEMBERSHIP  16 /* leave IP group/source */
+        #define IP_DROP_SOURCE_MEMBERSHIP  16 /* leave IP group/source */
     #endif
 
     // Join the multicast group from which to receive datagrams.
+    ip_mreq mreq;
     mreq.imr_multiaddr.s_addr = htonl(ip);
     mreq.imr_interface.s_addr = htonl(interfaceIP);
     if (setsockopt (m_socket,
@@ -382,7 +366,7 @@ bool DatagramSocket::leaveMulticastGroup(UINT ip, unsigned int interfaceIP) {
                     (char FAR *)&mreq,
                     sizeof (mreq)) == SOCKET_ERROR)
     {
-        osErr = WSAGetLastError();
+        int osErr = WSAGetLastError();
 
         // WSAEADDRNOTAVAIL error means that we already joined this group
         if (osErr != WSAEADDRNOTAVAIL)
@@ -396,7 +380,7 @@ bool DatagramSocket::leaveMulticastGroup(UINT ip, unsigned int interfaceIP) {
     return true;
 }
 
-bool DatagramSocket::sendBroadcast(UINT port,void * buf,UINT buflen)
+bool DatagramSocket::sendBroadcast(unsigned int port, void * buf, unsigned int buflen)
 {
     SOCKADDR_IN target;
     target.sin_family = AF_INET;
@@ -405,27 +389,21 @@ bool DatagramSocket::sendBroadcast(UINT port,void * buf,UINT buflen)
     int res = sendto(m_socket,
         (char*)buf,buflen,0,
         (SOCKADDR *) &target, sizeof ( SOCKADDR_IN ));
-    if (res != buflen)
-    {
-        #ifdef _DEBUG
-            assert(res == buflen);
-            int err = WSAGetLastError();
-            assert(err == 0);
-        #endif
+    if (res != buflen) {
+        assert(false);
         return false;
     }
     return true;
 }
 
-bool DatagramSocket::sendTo(const GenericAddr & addr,const void *buf,UINT buflen)
+bool DatagramSocket::sendTo(const GenericAddr & addr, const void *buf, unsigned int buflen)
 {
     SOCKADDR_IN target;
     target.sin_family = addr.family;
     target.sin_addr.s_addr= htonl(addr.ip);
     target.sin_port = htons(addr.port);
     int res = sendto(m_socket,(char*) buf,buflen,0,(SOCKADDR *) &target, sizeof ( SOCKADDR_IN ));
-    if (res != buflen)
-    {
+    if (res != buflen) {
         int osErr = WSAGetLastError();
         if (osErr == WSAEWOULDBLOCK) {
             // there is nothing on the input
@@ -442,7 +420,7 @@ bool DatagramSocket::sendTo(const GenericAddr & addr,const void *buf,UINT buflen
     return true;
 }
 
-bool DatagramSocket::recvFrom(GenericAddr & addr,void * buf,UINT & buflen)
+bool DatagramSocket::recvFrom(GenericAddr& addr, void * buf, unsigned int & buflen)
 {
     SOCKADDR_IN source;
     source.sin_family = AF_INET;
@@ -451,8 +429,7 @@ bool DatagramSocket::recvFrom(GenericAddr & addr,void * buf,UINT & buflen)
     int nSize = sizeof ( SOCKADDR_IN );
     buflen = recvfrom (m_socket,(char*)buf,buflen,0,(SOCKADDR FAR *) &source,&nSize);
 
-    if (buflen == SOCKET_ERROR)
-    {
+    if (buflen == SOCKET_ERROR) {
         buflen = 0;
 
         int osErr = WSAGetLastError();

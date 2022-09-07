@@ -29,10 +29,6 @@ void push32bits(std::vector<unsigned char>& fullData, float value) {
     push32bits(fullData,*reinterpret_cast<int*>(&value));
 }
 
-void push32bits(std::vector<unsigned char>& fullData, double value) {
-    push32bits(fullData,static_cast<float>(value));
-}
-
 void pushMetaData(std::vector<unsigned char>& fullData, const char (&eightCC)[9],float value) {
     for (int i=0; i<8; i++) {
         fullData.push_back(eightCC[i]);
@@ -132,8 +128,8 @@ int main()
 
             // Write point count - LSB first
             #define CIRCLE_POINT_COUNT 1024
-            #define CIRCLE_MOVE_SIZE 0.2
-            #define CIRCLE_SIZE 0.5
+            #define CIRCLE_MOVE_SIZE 0.2f
+            #define CIRCLE_SIZE 0.5f
             push16bits(fullData,CIRCLE_POINT_COUNT);
             // Write 1024 points
             const auto circleCenterX = CIRCLE_MOVE_SIZE * cos(animTime*3);
@@ -141,8 +137,8 @@ int main()
             for (int i=0; i<1024; i++) {
                 // Be sure to close circle
                 const auto normalizedPosInCircle = double(i)/(CIRCLE_POINT_COUNT-1);
-                const auto x = circleCenterX + CIRCLE_SIZE * cos(normalizedPosInCircle*2*M_PI);
-                const auto y = circleCenterY + CIRCLE_SIZE * sin(normalizedPosInCircle*2*M_PI);
+                const auto x = static_cast<float>(circleCenterX + CIRCLE_SIZE * cos(normalizedPosInCircle*2*M_PI));
+                const auto y = static_cast<float>(circleCenterY + CIRCLE_SIZE * sin(normalizedPosInCircle*2*M_PI));
                 assert(x>=-1 && x<=1 && y>=-1 && y<=1);
                 // Push X - LSB first
                 push32bits(fullData,x);
@@ -166,12 +162,12 @@ int main()
 
             // Write point count - LSB first
             #define TRIANGLE_POINT_COUNT 4
-            #define TRIANGLE_SIZE 0.5
+            #define TRIANGLE_SIZE 0.5f
             push16bits(fullData,TRIANGLE_POINT_COUNT);
             for (int i=0; i<TRIANGLE_POINT_COUNT; i++) {
                 const auto normalizedPosInTriangle = double(i)/(TRIANGLE_POINT_COUNT-1);
-                const auto x = TRIANGLE_SIZE * cos(normalizedPosInTriangle*2*M_PI);
-                const auto y = TRIANGLE_SIZE * sin(normalizedPosInTriangle*2*M_PI);
+                const auto x = static_cast<float>(TRIANGLE_SIZE * cos(normalizedPosInTriangle*2*M_PI));
+                const auto y = static_cast<float>(TRIANGLE_SIZE * sin(normalizedPosInTriangle*2*M_PI));
                 assert(x>=-1 && x<=1 && y>=-1 && y<=1);
                 // Push X - LSB first
                 push32bits(fullData,x);
@@ -186,6 +182,7 @@ int main()
             }
         #endif
 
+        // Compute necessary chunk count
         size_t chunksCount64 = 1 + fullData.size() / GEOM_UDP_MAX_DATA_BYTES_PER_PACKET;
         if (chunksCount64 > 255) {
             throw std::runtime_error("Protocol doesn't accept sending "
@@ -193,11 +190,13 @@ int main()
                                      "in more than 255 chunks");
         }
 
+        // Compute data CRC
         unsigned int dataCrc = 0;
         for (auto v: fullData) {
             dataCrc += v;
         }
 
+        // Send all chunks to the desired IP address
         size_t written = 0;
         unsigned char chunkNumber = 0;
         unsigned char chunksCount = static_cast<unsigned char>(chunksCount64);
@@ -226,9 +225,7 @@ int main()
             // Now send chunk packet
             GenericAddr destAddr;
             destAddr.family = AF_INET;
-            // Multicast 
-            //destAddr.ip = GEOM_UDP_IP;
-            // Unicast on localhost
+            // Unicast on localhost 127.0.0.1
             destAddr.ip = ((127 << 24) + (0 << 16) + (0 << 8) + 1);
             destAddr.port = GEOM_UDP_PORT;
             socket.sendTo(destAddr, &packet.front(), static_cast<unsigned int>(packet.size()));
