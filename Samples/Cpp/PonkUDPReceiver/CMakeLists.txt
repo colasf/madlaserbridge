@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(GeomUDPSender LANGUAGES CXX)
+project(PonkReceiver LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -14,7 +14,6 @@ set(HEADERS
     ../../../Common/Cpp/DatagramSocket/DatagramSocket.h
 )
 
-add_executable(GeomUDPSender ${SOURCES} ${HEADERS})
-target_include_directories(GeomUDPSender PRIVATE "../../../Common/Cpp/")
-
+add_executable(PonkReceiver ${SOURCES} ${HEADERS})
+target_include_directories(PonkReceiver PRIVATE "../../../Common/Cpp/")
 
