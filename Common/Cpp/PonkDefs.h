@@ -2,31 +2,32 @@
 
 /*
  *  PONK (Pathes Over NetworK) is a minimal protocol to transfer 2D colored pathes from a source to
- *  one or multiple receivers. It has been developped to transfer laser path
- *  from a software to another over network using UDP.
+ *  a receiver. It has been developped to transfer laser path from a software to another over network using UDP.
  *
  *  Requirements are:
- *      - Transfer over network of 2D geometry path with colors along the path
+ *      - Transfer over network of frames composed of 2D geometry path with colors along the path
  *      - Make it simple to implement on both sides
  *      - Make it work on almost any network - no specific hardware requirement or os settings tricks
- *      - Make it extendable while not increasing bandwidth requirements in most common cases
+ *      - Make it extensible while not increasing bandwidth requirements in most common cases
  *      - Avoid using unecessary bandwidth:
  *          - For laser, having more than 8 bits per component colors is mostly useless (laser projector
  *          diodes have a very poor definition in low values anyway)
  *          - Support multiple formats to adapt bandwidth to project requirements
- *      - If the path to transmit is too long to fit a single UDP packet, it should be cut in multiple
+ *      - If the frame to transmit is too long to fit a single UDP packet, it should be cut in multiple
  *        chunks. GEOM_UDP_MAX_DATA_BYTES_PER_PACKET is set to 8192 by default. This value should make
  *        it work on all popular OS.
  *      - The sender should be able to attach "meta data" to each path transmitted, that the receiver
  *        might handle for specific behaviors. When rasterizing a path for laser rendering
  *        user might give some hints like "should we favor scan speed or render precision ?"
+ *      - Receiver must be able to detect network issue and ignore a frame if something when wrong (CRC)
  *
  *  Implementation in Sender
- *      - A software can send multiple different path streams. The sender will let the user
- *        setup a 32 bits number to identify the stream (could be a random generated value when instanciating
- *        the sending component) and a sender name string (UTF8) that can be used to display a
- *        readable source name is the receiving application.
- *      - The sender identifier should not change when reloading a project file so the receiver can
+ *      - A software can send instanciate multiple senders.
+ *      - A sender is identified by a 32 bits number which can be a  random generated value when instanciating
+ *        the sending component
+ *      - It also transmits a "sender name" string (UTF8) that can be used to display a readable
+ *        source name is the receiving application.
+ *      - The stream identifier should not change when reloading a project file so the receiver can
  *        reconnect the stream. Changing the stream name should not affect existing connection (the
  *        receiver must use the integer identifier, the string is used to display a meaningful text only)
  *
@@ -36,28 +37,30 @@
  *      - The receiver should accept any packet size (chunk size can be adjusted on sender side)
  *      - The receiver should at least support data format "GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8"
  *      - If the receiver doesn't handle sender data type, it should notify it in the user interface in some way
- *      - Protocol Version field is the packets shouldn't be ignored: if the specified protocol version is not
+ *      - Protocol Version field in the packets shouldn't be ignored: if the specified protocol version is not
  *        handled, the receiver should ignore the packet and notify the user that it is not compatible with sender
- *        for this reason.
+ *        for this reason (protocol version will be increased only if breaking compatibility, not if we decide
+ *        too add a new data format)
  *
  *  Meta Data Format
  *      - Each path can have a list of meta data attached
  *      - A meta data is identified by 8 characters (the key)
  *      - Meta data value is a 32 bits floating point number,
  *        if value should be an boolean (ie "optimize angles"), any value different of zero is considered true
- *        if value should be an integer (ie "min ilda points"), value should be rounded (not truncated or floating
- *        point precision could make number value decreased by one)
+ *        if value should be an integer (ie "min ilda points"), value should be rounded to nearest int
+ *        if value should be a floating point, no problem
  *
  *  Possible improvements / extensions:
  *      Synchronization
  *          - If the receiver notify sender that it has used the last received frame, the sender could
- *            adjust to the receiver framerate...
+ *            adjust to the receiver framerate... (since the sender doesn't know how long it will take
+ *            to the laser to travel the path, but receiver might know)
  *      New Data Formats:
  *          - XY_U16_SingleRGB: if you send a path of 2000 points with the same color,
- *                              you can reduce bandwidth a lot by removing color
+ *                              we could reduce bandwidth a lot by removing color
  *          - XYRGBU1U2U3: would be useful to control additional diodes (ie yellow, deep blue...)
- *          - XYZRGB: providing the Z would let the receiver handle the 3D->2D projection with a
- *            controllable camera
+ *          - XYZRGB: providing the Z would let the user handle the 3D->2D projection with a
+ *            controllable camera in the receiver
  *      Laser Rasterization Settings:
  *          If you use a software for path generation (sender) and a receiver for the display,
  *          you might want to provide, for each path, some parameters that the receiver could
@@ -66,6 +69,7 @@
  *              - Should we prior scan speed or path render precision ? (parameter "Max Scan Speed" in radians/ms ?)
  *              - Should we optimize angles for this path ? In some case you might want (ie text display)
  *                but is some not (ie generative noisy curved shapes)
+ *          Those settings can actually be transmitted in meta data, but uniformizing it is an idea.
  *
  *  Packet Format:
  *      - Header:
@@ -84,7 +88,7 @@
  *                  - For each Meta Data:
  *                      - Key - char[8]
  *                      - Value - 32 bits float
- *              - Point Count - unsigned short (16 bits int)
+ *              - Point Count - unsigned short (16 bits)
  *              - For each point
  *                  - Point data, depending on data format, ie X,Y as float 32, R,G,B as unsigned char
  *
@@ -116,6 +120,7 @@
  *          - SNGLPTIN: Integer - number of ILDA points we should use for this shape if it's a single beam (a single position or
  *            at least all points are at the same position)
  *
+ *      - ... Other software to be added
 */
 
 // Header String
@@ -149,9 +154,9 @@ struct GeomUdpHeader {
     unsigned int senderIdentifier;  // 4 bytes - used to identify the source, so when changing name in sender, the receiver can just rename existing stream
     char senderName[32];            // 32 bytes UTF8 null terminated string
     unsigned char frameNumber;      // Increase by one on each frame
-    unsigned char chunkCount;
-    unsigned char chunkNumber;
-    unsigned int dataCrc;           // CRC of all data of the frame (all chunks, to detect network transmission issues)
+    unsigned char chunkCount;       // Number of chunks in this frame
+    unsigned char chunkNumber;      // Number of this chunk
+    unsigned int dataCrc;           // CRC of all data in the frame (data from  chunks, to detect network transmission issues)
 } ATTRIBUTE_PACKED;
 
 struct GeomUdpMetaData {
@@ -160,7 +165,7 @@ struct GeomUdpMetaData {
 } ATTRIBUTE_PACKED;
 
 struct GeomUdpPathData {
-    unsigned short pointCount;     // Point Count
+    unsigned short pointCount;      // Point Count
     // Data: XYRGBXYRGB....
 } ATTRIBUTE_PACKED;
 
@@ -170,7 +175,7 @@ struct GeomUdpPath {
 } ATTRIBUTE_PACKED;
 
 struct GeomUdpPacketData {
-    unsigned char dataFormat;         // ie: GEOM_UDP_DATA_FORMAT_XYRGB_U16
+    unsigned char dataFormat;       // ie: GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8
     // Data: N x GeomUdpPath
 } ATTRIBUTE_PACKED;
 

@@ -4,7 +4,7 @@
 #include <cmath>
 #include <cassert>
 #include "DatagramSocket/DatagramSocket.h"
-#include "UdpGeomDefs.h"
+#include "PonkDefs.h"
 #ifndef M_PI // M_PI not defined on Windows
     #define M_PI 3.14159265358979323846
 #endif

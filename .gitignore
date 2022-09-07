@@ -351,3 +351,13 @@ MigrationBackup/
 .DS_Store
 MadLaserBridge.xcodeproj/project.xcworkspace/xcuserdata
 *.xcuserstate
+
+# Qt build folders
+build-*
+
+# Xcode user data
+xcuserdata 
+
+# Touch designer known plugins file
+Plugins.json
+Touch Plugin/Sample Project/Plugins/Plugins.json

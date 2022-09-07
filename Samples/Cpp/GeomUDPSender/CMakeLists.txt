@@ -10,6 +10,7 @@ set(SOURCES
     main.cpp
 )
 set(HEADERS
+    ../../../Common/Cpp/PonkDefs.h
     ../../../Common/Cpp/DatagramSocket/DatagramSocket.h
 )
 
