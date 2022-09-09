@@ -2,7 +2,7 @@
 
 #include <string>
 
-static std::string ipIntToStr(unsigned int ip) {
+inline std::string ipIntToStr(unsigned int ip) {
   return std::to_string((ip >> 24) & 0xFF) + '.' + std::to_string((ip >> 16) & 0xFF) + '.' +
           std::to_string((ip >> 8) & 0xFF) + '.' + std::to_string(ip & 0xFF);
 }

@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E227272621B6FEB100905532"
-               BuildableName = "MadLaserBrigde.plugin"
-               BlueprintName = "MadLaserBrigde"
-               ReferencedContainer = "container:MadLaserBridge.xcodeproj">
+               BuildableName = "PonkPlugin.plugin"
+               BlueprintName = "PonkPlugin"
+               ReferencedContainer = "container:PonkPlugin.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>

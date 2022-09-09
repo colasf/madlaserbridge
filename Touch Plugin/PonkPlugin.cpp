@@ -1,29 +1,10 @@
-/* Shared Use License: This file is owned by Derivative Inc. (Derivative)
-* and can only be used, and/or modified for use, in conjunction with
-* Derivative's TouchDesigner software, and only if you are a licensee who has
-* accepted Derivative's TouchDesigner license or assignment agreement
-* (which also govern the use of this file). You may share or redistribute
-* a modified version of this file provided the following conditions are met:
-*
-* 1. The shared file or redistribution must retain the information set out
-* above and this list of conditions.
-* 2. Derivative's name (Derivative Inc.) or its trademarks may not be used
-* to endorse or promote products derived from this file without specific
-* prior written permission from Derivative.
-*/
-
-
-#include "MadLaserBridge.h"
+#include "PonkPlugin.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include <assert.h>
 #include <iostream>
-
-
-
-
 
 #ifndef M_PI // M_PI not defined on Windows
 	#define M_PI 3.14159265358979323846
@@ -46,13 +27,13 @@ extern "C"
 		// The opType is the unique name for this TOP. It must start with a 
 		// capital A-Z character, and all the following characters must lower case
 		// or numbers (a-z, 0-9)
-		info->customOPInfo.opType->setString("Madlaserbridge");
+		info->customOPInfo.opType->setString("Ponk Output");
 
 		// The opLabel is the text that will show up in the OP Create Dialog
-		info->customOPInfo.opLabel->setString("Mad Laser Bridge");
+		info->customOPInfo.opLabel->setString("Ponk Output");
 
 		// Will be turned into a 3 letter icon on the nodes
-		info->customOPInfo.opIcon->setString("MLB");
+		info->customOPInfo.opIcon->setString("PNK");
 
 		// Information about the author of this OP
 		info->customOPInfo.authorName->setString("Tyrell");
@@ -70,7 +51,7 @@ extern "C"
 	{
 		// Return a new instance of your class every time this is called.
 		// It will be called once per SOP that is using the .dll
-		return new MadLaserBridge(info);
+		return new PonkPlugin(info);
 	}
 
 	DLLEXPORT
@@ -80,13 +61,13 @@ extern "C"
 		// Delete the instance here, this will be called when
 		// Touch is shutting down, when the SOP using that instance is deleted, or
 		// if the SOP loads a different DLL
-		delete (MadLaserBridge*)instance;
+		delete (PonkPlugin*)instance;
 	}
 
 };
 
 
-MadLaserBridge::MadLaserBridge(const OP_NodeInfo* info) : myNodeInfo(info)
+PonkPlugin::PonkPlugin(const OP_NodeInfo* info) : myNodeInfo(info)
 {
 	myExecuteCount = 0;
 	myOffset = 0.0;
@@ -100,13 +81,13 @@ MadLaserBridge::MadLaserBridge(const OP_NodeInfo* info) : myNodeInfo(info)
 	socket = new DatagramSocket (INADDR_ANY, 0);;
 }
 
-MadLaserBridge::~MadLaserBridge()
+PonkPlugin::~PonkPlugin()
 {
 	delete socket;
 }
 
 void
-MadLaserBridge::getGeneralInfo(SOP_GeneralInfo* ginfo, const OP_Inputs* inputs, void* reserved)
+PonkPlugin::getGeneralInfo(SOP_GeneralInfo* ginfo, const OP_Inputs* inputs, void* reserved)
 {
 	// This will cause the node to cook every frame
 	ginfo->cookEveryFrameIfAsked = false;
@@ -118,37 +99,37 @@ MadLaserBridge::getGeneralInfo(SOP_GeneralInfo* ginfo, const OP_Inputs* inputs, 
 
 }
 
-void MadLaserBridge::push16bits(std::vector<unsigned char>& fullData, unsigned short value) {
+void PonkPlugin::push16bits(std::vector<unsigned char>& fullData, unsigned short value) {
 	fullData.push_back(static_cast<unsigned char>((value >> 0) & 0xFF));
 	fullData.push_back(static_cast<unsigned char>((value >> 8) & 0xFF));
 }
 
-void MadLaserBridge::push32bits(std::vector<unsigned char>& fullData, int value) {
+void PonkPlugin::push32bits(std::vector<unsigned char>& fullData, int value) {
 	fullData.push_back(static_cast<unsigned char>((value >> 0) & 0xFF));
 	fullData.push_back(static_cast<unsigned char>((value >> 8) & 0xFF));
 	fullData.push_back(static_cast<unsigned char>((value >> 16) & 0xFF));
 	fullData.push_back(static_cast<unsigned char>((value >> 24) & 0xFF));
 }
 
-void MadLaserBridge::pushFloat32(std::vector<unsigned char>& fullData, float value) {
+void PonkPlugin::pushFloat32(std::vector<unsigned char>& fullData, float value) {
     const auto asInt = *reinterpret_cast<int*>(&value);
     push32bits(fullData,asInt);
 }
 
-void MadLaserBridge::pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], int value) {
+void PonkPlugin::pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], int value) {
 	for (int i = 0; i < 8; i++) {
 		fullData.push_back(eightCC[i]);
 	}
 	push32bits(fullData, value);
 }
-void MadLaserBridge::pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], float value) {
+void PonkPlugin::pushMetaData(std::vector<unsigned char>& fullData, const char(&eightCC)[9], float value) {
 	for (int i = 0; i < 8; i++) {
 		fullData.push_back(eightCC[i]);
 	}
 	push32bits(fullData, *(int*)&value);
 }
 
-void MadLaserBridge::pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor) {
+void PonkPlugin::pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor) {
     pushFloat32(fullData, pointPosition.x);
     pushFloat32(fullData, pointPosition.y);
 	#define CLAMP_IN_ZERO_ONE(x) (x<0?0:(x>1?1:x))
@@ -157,7 +138,7 @@ void MadLaserBridge::pushPoint_XY_F32_RGB_U8(std::vector<unsigned char>& fullDat
     fullData.push_back(static_cast<unsigned char>(CLAMP_IN_ZERO_ONE(pointColor.b)*255));
 }
 
-void MadLaserBridge::pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor) {
+void PonkPlugin::pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, const Position& pointPosition, const Color& pointColor) {
     if (pointPosition.x < -1 || pointPosition.x > 1 || pointPosition.y < -1 || pointPosition.y > 1) {
         // Clamp position and set color = 0
         unsigned short x16Bits, y16Bits;
@@ -207,7 +188,7 @@ void MadLaserBridge::pushPoint_XYRGB_U16(std::vector<unsigned char>& fullData, c
     }
 }
 
-bool MadLaserBridge::validatePrimitiveDat(const OP_DATInput* primitive, int numPrimitives) {
+bool PonkPlugin::validatePrimitiveDat(const OP_DATInput* primitive, int numPrimitives) {
 	// Check that the dat is table
 	if (!primitive->isTable) {
 		return false;
@@ -228,7 +209,7 @@ bool MadLaserBridge::validatePrimitiveDat(const OP_DATInput* primitive, int numP
 }
 
 
-std::map<std::string, float> MadLaserBridge::getMetadata(const OP_DATInput* primitive, int primitiveIndex) {
+std::map<std::string, float> PonkPlugin::getMetadata(const OP_DATInput* primitive, int primitiveIndex) {
 	std::map<std::string, float> metadata;
 	
 	// check how many metadata attribute the primitive dat contains
@@ -245,7 +226,7 @@ std::map<std::string, float> MadLaserBridge::getMetadata(const OP_DATInput* prim
 }
 
 Matrix44<double>
-MadLaserBridge::buildCameraTransProjMatrix(const OP_Inputs* inputs)
+PonkPlugin::buildCameraTransProjMatrix(const OP_Inputs* inputs)
 {
 
 	// get the camera object
@@ -298,7 +279,7 @@ MadLaserBridge::buildCameraTransProjMatrix(const OP_Inputs* inputs)
 
 
 void
-MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reserved)
+PonkPlugin::execute(SOP_Output* output, const OP_Inputs* inputs, void* reserved)
 {
 	myExecuteCount++;
 	if (!inputs->getParInt("Active")) {
@@ -337,7 +318,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 				//std::cout << "-------------------- primitive : " << i << std::endl;
 
                 // Write Format Data
-                fullData.push_back(GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8);
+                fullData.push_back(PONK_DATA_FORMAT_XY_F32_RGB_U8);
 
 				// get the metadata
 				std::map<std::string, float> metadata = getMetadata(primitive, primitiveNumber);
@@ -390,7 +371,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 		}
 
 		// Check if we don't reach the maximum number of chunck
-		size_t chunksCount64 = 1 + fullData.size() / GEOM_UDP_MAX_DATA_BYTES_PER_PACKET;
+		size_t chunksCount64 = 1 + fullData.size() / PONK_MAX_DATA_BYTES_PER_PACKET;
 		if (chunksCount64 > 255) {
 			throw std::runtime_error("Protocol doesn't accept sending "
 				"a packet that would be splitted "
@@ -417,7 +398,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 		while (written < fullData.size()) {
 			// Write packet header - 8 bytes
 			GeomUdpHeader header;
-			strncpy(header.headerString, GEOM_UDP_HEADER_STRING, sizeof(header.headerString));
+			strncpy(header.headerString, PONK_HEADER_STRING, sizeof(header.headerString));
 			header.protocolVersion = 0;
 			header.senderIdentifier = uid; // Unique ID (so when changing name in sender, the receiver can just rename existing stream)
 			strncpy(header.senderName, "Touch Designer", sizeof(header.senderName));
@@ -428,7 +409,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 
 			// Prepare buffer
 			std::vector<unsigned char> packet;
-			size_t dataBytesForThisChunk = std::min<size_t>(fullData.size() - written, GEOM_UDP_MAX_DATA_BYTES_PER_PACKET-sizeof(GeomUdpHeader));
+			size_t dataBytesForThisChunk = std::min<size_t>(fullData.size() - written, PONK_MAX_DATA_BYTES_PER_PACKET-sizeof(GeomUdpHeader));
 			packet.resize(sizeof(GeomUdpHeader) + dataBytesForThisChunk);
 			// Write header
 			memcpy(&packet[0], &header, sizeof(GeomUdpHeader));
@@ -439,11 +420,10 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 			// Now send chunk packet
 			GenericAddr destAddr;
 			destAddr.family = AF_INET;
-			// Multicast 
-			//destAddr.ip = GEOM_UDP_IP;
-			// Unicast on localhost
+
+            // Unicast UDP
 			destAddr.ip = ((ip[0] << 24) + (ip[1] << 16) + (ip[2] << 8) + ip[3]);
-			destAddr.port = GEOM_UDP_PORT;
+			destAddr.port = PONK_PORT;
 			socket->sendTo(destAddr, &packet[0], static_cast<unsigned int>(packet.size()));
 
 			chunkNumber++;
@@ -457,7 +437,7 @@ MadLaserBridge::execute(SOP_Output* output, const OP_Inputs* inputs, void* reser
 }
 
 void
-MadLaserBridge::executeVBO(SOP_VBOOutput* output,
+PonkPlugin::executeVBO(SOP_VBOOutput* output,
 						const OP_Inputs* inputs,
 						void* reserved)
 {
@@ -469,7 +449,7 @@ MadLaserBridge::executeVBO(SOP_VBOOutput* output,
 //-----------------------------------------------------------------------------------------------------
 
 int32_t
-MadLaserBridge::getNumInfoCHOPChans(void* reserved)
+PonkPlugin::getNumInfoCHOPChans(void* reserved)
 {
 	// We return the number of channel we want to output to any Info CHOP
 	// connected to the CHOP. In this example we are just going to send 4 channels.
@@ -477,7 +457,7 @@ MadLaserBridge::getNumInfoCHOPChans(void* reserved)
 }
 
 void
-MadLaserBridge::getInfoCHOPChan(int32_t index,
+PonkPlugin::getInfoCHOPChan(int32_t index,
 								OP_InfoCHOPChan* chan, void* reserved)
 {
 	// This function will be called once for each channel we said we'd want to return
@@ -509,7 +489,7 @@ MadLaserBridge::getInfoCHOPChan(int32_t index,
 }
 
 bool
-MadLaserBridge::getInfoDATSize(OP_InfoDATSize* infoSize, void* reserved)
+PonkPlugin::getInfoDATSize(OP_InfoDATSize* infoSize, void* reserved)
 {
 	infoSize->rows = 3;
 	infoSize->cols = 2;
@@ -520,7 +500,7 @@ MadLaserBridge::getInfoDATSize(OP_InfoDATSize* infoSize, void* reserved)
 }
 
 void
-MadLaserBridge::getInfoDATEntries(int32_t index,
+PonkPlugin::getInfoDATEntries(int32_t index,
 								int32_t nEntries,
 								OP_InfoDATEntries* entries,
 								void* reserved)
@@ -588,7 +568,7 @@ MadLaserBridge::getInfoDATEntries(int32_t index,
 
 
 void
-MadLaserBridge::setupParameters(OP_ParameterManager* manager, void* reserved)
+PonkPlugin::setupParameters(OP_ParameterManager* manager, void* reserved)
 {	// Active
 
 	{
@@ -716,7 +696,7 @@ MadLaserBridge::setupParameters(OP_ParameterManager* manager, void* reserved)
 }
 
 void
-MadLaserBridge::pulsePressed(const char* name, void* reserved)
+PonkPlugin::pulsePressed(const char* name, void* reserved)
 {
 	if (!strcmp(name, "Reset"))
 	{

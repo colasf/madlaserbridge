@@ -14,7 +14,7 @@
  *          diodes have a very poor definition in low values anyway)
  *          - Support multiple formats to adapt bandwidth to project requirements
  *      - If the frame to transmit is too long to fit a single UDP packet, it should be cut in multiple
- *        chunks. GEOM_UDP_MAX_DATA_BYTES_PER_PACKET is set to 8192 by default. This value should make
+ *        chunks. PONK_MAX_DATA_BYTES_PER_PACKET is set to 8192 by default. This value should make
  *        it work on all popular OS.
  *      - The sender should be able to attach "meta data" to each path transmitted, that the receiver
  *        might handle for specific behaviors. When rasterizing a path for laser rendering
@@ -35,7 +35,7 @@
  *      - The receiver should handle the fact that multiple senders can be sending packets.
  *      - It should be as reactive as possible to reduce latency and improve synchronization.
  *      - The receiver should accept any packet size (chunk size can be adjusted on sender side)
- *      - The receiver should at least support data format "GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8"
+ *      - The receiver should at least support data format "PONK_DATA_FORMAT_XY_F32_RGB_U8"
  *      - If the receiver doesn't handle sender data type, it should notify it in the user interface in some way
  *      - Protocol Version field in the packets shouldn't be ignored: if the specified protocol version is not
  *        handled, the receiver should ignore the packet and notify the user that it is not compatible with sender
@@ -83,7 +83,7 @@
  *          - CRC - unsigned int: sum of all data contained in this frame (of all chunks)
  *      - Data:
  *          - For each path:
- *              - Data format - unsigned char (GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8...)
+ *              - Data format - unsigned char (PONK_DATA_FORMAT_XY_F32_RGB_U8...)
  *              - Meta Data count - unsigned char
  *                  - For each Meta Data:
  *                      - Key - char[8]
@@ -124,16 +124,16 @@
 */
 
 // Header String
-#define GEOM_UDP_HEADER_STRING "PONK-UDP"
+#define PONK_HEADER_STRING "PONK-UDP"
 // Protocol Version
-#define GEOM_UDP_PROTOCOL_VERSION 0
+#define PONK_PROTOCOL_VERSION 0
 // Data Formats
-#define GEOM_UDP_DATA_FORMAT_XYRGB_U16 0
-#define GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8 1
+#define PONK_DATA_FORMAT_XYRGB_U16 0
+#define PONK_DATA_FORMAT_XY_F32_RGB_U8 1
 // Maximum chunk size
-#define GEOM_UDP_MAX_DATA_BYTES_PER_PACKET 8192
+#define PONK_MAX_DATA_BYTES_PER_PACKET 8192
 // Geom UDP port = 5583
-#define GEOM_UDP_PORT 5583
+#define PONK_PORT 5583
 
 #ifdef _MSC_VER
     // ms VC .NET
@@ -175,7 +175,7 @@ struct GeomUdpPath {
 } ATTRIBUTE_PACKED;
 
 struct GeomUdpPacketData {
-    unsigned char dataFormat;       // ie: GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8
+    unsigned char dataFormat;       // ie: PONK_DATA_FORMAT_XY_F32_RGB_U8
     // Data: N x GeomUdpPath
 } ATTRIBUTE_PACKED;
 

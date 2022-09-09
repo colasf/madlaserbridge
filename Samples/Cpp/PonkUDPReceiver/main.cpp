@@ -10,7 +10,7 @@ int main()
 {
     std::cout << "Starting" << std::endl;
 
-    DatagramSocket socket(INADDR_ANY,GEOM_UDP_PORT);
+    DatagramSocket socket(INADDR_ANY,PONK_PORT);
 
     // TODO: let user choose a network interface or join for all active networkinterfaces
     // Zero means first active network adapter if I'm not wrong
@@ -54,7 +54,7 @@ int main()
         const GeomUdpHeader* header = reinterpret_cast<const GeomUdpHeader*>(buffer);
 
         // Check protocol header string
-        if (strncmp(header->headerString,GEOM_UDP_HEADER_STRING,8) != 0) {
+        if (strncmp(header->headerString,PONK_HEADER_STRING,8) != 0) {
             std::cout << "Error in frame, invalid header" << std::endl;
             continue;
         }
@@ -145,7 +145,7 @@ int main()
         if (receivedAllChunksYet) {
             // Put all frame data together in a single buffer
             std::vector<unsigned char> allData;
-            allData.reserve(255*GEOM_UDP_MAX_DATA_BYTES_PER_PACKET);
+            allData.reserve(255*PONK_MAX_DATA_BYTES_PER_PACKET);
             for (int i=0; i<header->chunkCount; i++) {
                 allData.insert(allData.end(),chunksData[i].begin(),chunksData[i].end());
             }
@@ -230,9 +230,9 @@ int main()
                 dataOffset += 2;
 
                 unsigned char bytesPerPoint;
-                if (dataFormat == GEOM_UDP_DATA_FORMAT_XYRGB_U16) {
+                if (dataFormat == PONK_DATA_FORMAT_XYRGB_U16) {
                     bytesPerPoint = 5 * sizeof(unsigned short);
-                } else if (dataFormat == GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8) {
+                } else if (dataFormat == PONK_DATA_FORMAT_XY_F32_RGB_U8) {
                     bytesPerPoint = 2 * sizeof(float) + 3 * sizeof(unsigned char);
                 } else {
                     std::cout << "Error: unhandled data format: " << dataFormat << std::endl;
@@ -248,7 +248,7 @@ int main()
                 for (int i=0; i<pointCount; i++) {
                     Path::Point point;
 
-                    if (dataFormat == GEOM_UDP_DATA_FORMAT_XYRGB_U16) {
+                    if (dataFormat == PONK_DATA_FORMAT_XYRGB_U16) {
                         unsigned short x16bits = allData[dataOffset] + (allData[dataOffset+1]<<8);
                         dataOffset += 2;
                         unsigned short y16bits = allData[dataOffset] + (allData[dataOffset+1]<<8);
@@ -265,7 +265,7 @@ int main()
                         point.r = r16bits/65535.f;
                         point.g = g16bits/65535.f;
                         point.b = b16bits/65535.f;
-                    } else if (dataFormat == GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8) {
+                    } else if (dataFormat == PONK_DATA_FORMAT_XY_F32_RGB_U8) {
                         point.x = *reinterpret_cast<float*>(&allData[dataOffset]);
                         dataOffset += sizeof(float);
                         point.y = *reinterpret_cast<float*>(&allData[dataOffset]);

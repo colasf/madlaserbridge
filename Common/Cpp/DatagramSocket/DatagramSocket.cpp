@@ -117,12 +117,10 @@ bool DatagramSocket::joinMulticastGroup(unsigned int ip, unsigned int interfaceI
 }
 
 bool DatagramSocket::leaveMulticastGroup(unsigned int ip, unsigned int interfaceIP) {
-    int res = 0;
-
     struct ip_mreq mreq;
     mreq.imr_interface.s_addr = htonl(interfaceIP);
     mreq.imr_multiaddr.s_addr = htonl(ip);
-    res = setsockopt(m_socket,IPPROTO_IP,IP_DROP_MEMBERSHIP,&mreq,sizeof(mreq));
+    auto res = setsockopt(m_socket,IPPROTO_IP,IP_DROP_MEMBERSHIP,&mreq,sizeof(mreq));
     if (res < 0) {
         std::cout << "Error in DatagramSocket: IP_DROP_MEMBERSHIP error: " << strerror(errno) << std::endl;
         assert(false);
@@ -140,8 +138,8 @@ bool DatagramSocket::sendBroadcast(unsigned int port,void * buf,unsigned int buf
     to.sin_addr.s_addr= htonl(0xFFFFFFFF);
     to.sin_port = htons(port);
     bzero(&(to.sin_zero), 8);     /* zero the rest of the struct */
-    int ret = sendto(m_socket,(char*)buf,buflen,0,(sockaddr *) &to, sizeof ( SOCKADDR_IN ));
-    if (ret<0) {
+    auto ret = sendto(m_socket,(char*)buf,buflen,0,(sockaddr *) &to, sizeof ( SOCKADDR_IN ));
+    if (ret!=buflen) {
         std::cout << "Error in DatagramSocket: sendto error: " << strerror(errno) << std::endl;
     }
     return ((unsigned int)ret == buflen);
@@ -160,8 +158,8 @@ bool DatagramSocket::sendTo(const GenericAddr & addr,const void *buf,unsigned in
     to.sin_addr.s_addr = htonl(addr.ip);
     to.sin_port = htons(addr.port);
     bzero(&(to.sin_zero), 8);     /* zero the rest of the struct */
-    int ret = sendto(m_socket,(void *)buf,buflen,0,(sockaddr *)&to,sizeof(sockaddr));
-    if (ret<=0) {
+    auto ret = sendto(m_socket,(void *)buf,buflen,0,(sockaddr *)&to,sizeof(sockaddr));
+    if (ret != buflen) {
         std::cout << "Error in DatagramSocket: sendto error: " << strerror(errno) << " on interface " << ipIntToStr(addr.ip) << std::endl;
     }
     return ((unsigned int)ret == buflen);
@@ -172,20 +170,19 @@ bool DatagramSocket::recvFrom(GenericAddr & addr,void * buf,unsigned int & bufle
     SOCKADDR_IN from;
     memset((void*)&from,0,sizeof(from));
     int from_addr_len = sizeof(from);
-    int res = recvfrom(m_socket,(void*)buf,buflen,0,(sockaddr*)&from,(socklen_t*)&from_addr_len);
+    auto res = recvfrom(m_socket,(void*)buf,buflen,0,(sockaddr*)&from,(socklen_t*)&from_addr_len);
 
     // we received datas
     if (res > 0) {
         assert(from_addr_len == sizeof(sockaddr));
-        buflen = res;
+        buflen = static_cast<unsigned int>(res);
 
         addr.family = AF_INET;
         addr.ip = ntohl(from.sin_addr.s_addr);
         addr.port = ntohs(from.sin_port);
+        
         return true;
-    }
-    else
-    if (res < 0) {
+    } else {
         if (errno == EWOULDBLOCK) {
             // that's normal for non blocking sockets
             // when there is no data
@@ -194,17 +191,10 @@ bool DatagramSocket::recvFrom(GenericAddr & addr,void * buf,unsigned int & bufle
         }
         else
         {
-            // error
-            std::cout << "Udp read failed, error: " << strerror(errno) << std::endl;
-            assert(false);
-            return false;
+            // no datas, no error
+            buflen = 0;
+            return true;
         }
-    }
-    else
-    {
-        // no datas, no error
-        buflen = 0;
-        return true;
     }
 }
 

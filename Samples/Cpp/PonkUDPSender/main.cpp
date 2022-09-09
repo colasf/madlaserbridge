@@ -50,9 +50,9 @@ int main()
         std::vector<unsigned char> fullData;
         fullData.reserve(65536);
 
-        #ifdef USE_GEOM_UDP_DATA_FORMAT_XYRGB_U16
+        #ifdef USE_PONK_DATA_FORMAT_XYRGB_U16
             // Generate circle data with 1024 points
-            fullData.push_back(GEOM_UDP_DATA_FORMAT_XYRGB_U16); // Write Format Data
+            fullData.push_back(PONK_DATA_FORMAT_XYRGB_U16); // Write Format Data
 
             // Meta Data
             fullData.push_back(2); // Write meta data count
@@ -88,7 +88,7 @@ int main()
             }
 
             // Generate a triangle with 4 points (to close it)
-            fullData.push_back(GEOM_UDP_DATA_FORMAT_XYRGB_U16); // Write Format Data
+            fullData.push_back(PONK_DATA_FORMAT_XYRGB_U16); // Write Format Data
 
             // Meta Data
             fullData.push_back(1); // Write meta data count
@@ -119,7 +119,7 @@ int main()
             }
         #else
             // Generate circle data with 1024 points
-            fullData.push_back(GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8); // Write Format Data
+            fullData.push_back(PONK_DATA_FORMAT_XY_F32_RGB_U8); // Write Format Data
 
             // Meta Data
             fullData.push_back(2); // Write meta data count
@@ -154,7 +154,7 @@ int main()
 
             // Generate a triangle with 4 points (to close it)
             // Generate circle data with 1024 points
-            fullData.push_back(GEOM_UDP_DATA_FORMAT_XY_F32_RGB_U8); // Write Format Data
+            fullData.push_back(PONK_DATA_FORMAT_XY_F32_RGB_U8); // Write Format Data
 
             // Meta Data
             fullData.push_back(1); // Write meta data count
@@ -183,7 +183,7 @@ int main()
         #endif
 
         // Compute necessary chunk count
-        size_t chunksCount64 = 1 + fullData.size() / GEOM_UDP_MAX_DATA_BYTES_PER_PACKET;
+        size_t chunksCount64 = 1 + fullData.size() / PONK_MAX_DATA_BYTES_PER_PACKET;
         if (chunksCount64 > 255) {
             throw std::runtime_error("Protocol doesn't accept sending "
                                      "a packet that would be splitted "
@@ -203,7 +203,7 @@ int main()
         while (written < fullData.size()) {
             // Write packet header - 8 bytes
             GeomUdpHeader header;
-            strncpy(header.headerString,GEOM_UDP_HEADER_STRING,sizeof(header.headerString));
+            strncpy(header.headerString,PONK_HEADER_STRING,sizeof(header.headerString));
             header.protocolVersion = 0;
             header.senderIdentifier = 123123; // Unique ID (so when changing name in sender, the receiver can just rename existing stream)
             strncpy(header.senderName,"Sample Sender",sizeof(header.senderName));
@@ -214,7 +214,7 @@ int main()
 
             // Prepare buffer
             std::vector<unsigned char> packet;
-            size_t dataBytesForThisChunk = std::min<size_t>(fullData.size()-written, GEOM_UDP_MAX_DATA_BYTES_PER_PACKET);
+            size_t dataBytesForThisChunk = std::min<size_t>(fullData.size()-written, PONK_MAX_DATA_BYTES_PER_PACKET);
             packet.resize(sizeof(GeomUdpHeader) + dataBytesForThisChunk);
             // Write header
             memcpy(&packet[0],&header,sizeof(GeomUdpHeader));
@@ -227,7 +227,7 @@ int main()
             destAddr.family = AF_INET;
             // Unicast on localhost 127.0.0.1
             destAddr.ip = ((127 << 24) + (0 << 16) + (0 << 8) + 1);
-            destAddr.port = GEOM_UDP_PORT;
+            destAddr.port = PONK_PORT;
             socket.sendTo(destAddr, &packet.front(), static_cast<unsigned int>(packet.size()));
 
             chunkNumber++;
