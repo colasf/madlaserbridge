@@ -27,7 +27,7 @@ extern "C"
 		// The opType is the unique name for this TOP. It must start with a 
 		// capital A-Z character, and all the following characters must lower case
 		// or numbers (a-z, 0-9)
-		info->customOPInfo.opType->setString("Ponk Output");
+		info->customOPInfo.opType->setString("Ponkoutput");
 
 		// The opLabel is the text that will show up in the OP Create Dialog
 		info->customOPInfo.opLabel->setString("Ponk Output");
