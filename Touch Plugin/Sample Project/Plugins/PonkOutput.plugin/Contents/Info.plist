@@ -7,13 +7,13 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>MadLaserBrigde</string>
+	<string>PonkOutput</string>
 	<key>CFBundleIdentifier</key>
-	<string>ca.derivative.cpp.MadLaserBrigde</string>
+	<string>com.Tyrell.PonkOutput</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>MadLaserBrigde</string>
+	<string>PonkOutput</string>
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
@@ -41,8 +41,6 @@
 	<key>DTXcodeBuild</key>
 	<string>13F100</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.14</string>
-	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2022 Derivative. All rights reserved.</string>
+	<string>10.13</string>
 </dict>
 </plist>

@@ -13,13 +13,13 @@
 
 
 // To get more help about these functions, look at SOP_CPlusPlusBase.h
-class PonkPlugin : public SOP_CPlusPlusBase
+class PonkOutput : public SOP_CPlusPlusBase
 {
 public:
 
-	PonkPlugin(const OP_NodeInfo* info);
+	PonkOutput(const OP_NodeInfo* info);
 
-	virtual ~PonkPlugin();
+	virtual ~PonkOutput();
 
 	virtual void getGeneralInfo(SOP_GeneralInfo*, const OP_Inputs*, void* reserved1) override;
 

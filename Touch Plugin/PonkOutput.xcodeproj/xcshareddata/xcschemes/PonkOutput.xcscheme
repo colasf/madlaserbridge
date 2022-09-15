@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1330"
+   LastUpgradeVersion = "1340"
    version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E227272621B6FEB100905532"
-               BuildableName = "PonkPlugin.plugin"
-               BlueprintName = "PonkPlugin"
-               ReferencedContainer = "container:PonkPlugin.xcodeproj">
+               BuildableName = "PonkOutput.plugin"
+               BlueprintName = "PonkOutput"
+               ReferencedContainer = "container:PonkOutput.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -40,11 +40,6 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <PathRunnable
-         runnableDebuggingMode = "0"
-         BundleIdentifier = "ca.derivative.TouchDesigner"
-         FilePath = "/Applications/TouchDesigner.app">
-      </PathRunnable>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -52,6 +47,15 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "E227272621B6FEB100905532"
+            BuildableName = "PonkOutput.plugin"
+            BlueprintName = "PonkOutput"
+            ReferencedContainer = "container:PonkOutput.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">
